@@ -102,7 +102,26 @@ const SkillDetailRoute = () => {
   const skill = skillDetail.data;
   const skillSnapshots = useSkillSnapshots(skillName);
   const createSnapshot = useCreateSkillSnapshot(skillName);
-  const restoreSnapshot = useRestoreSkillSnapshot(skillName);
+  const restoreSnapshot = useRestoreSkillSnapshot(skillName, {
+    onSuccess: async (result) => {
+      const nextSkillName = result.name;
+
+      if (nextSkillName !== skillName) {
+        await queryClient.invalidateQueries({ queryKey: skillListQueryKey });
+        await cancelSkillQueries(queryClient, skillName);
+        removeSkillQueries(queryClient, nextSkillName);
+        await navigate({
+          params: { skillName: nextSkillName },
+          search: { path },
+          to: "/skills/$skillName",
+        });
+        removeSkillQueries(queryClient, skillName);
+        return;
+      }
+
+      await invalidateSkillQueries(queryClient, skillName);
+    },
+  });
   const patchSkill = usePatchSkill(skillName);
 
   const setSelectedPath = (nextPath: string | undefined) => {
@@ -114,22 +133,7 @@ const SkillDetailRoute = () => {
   };
 
   const restore = async (snapshotNumber: number) => {
-    const result = await restoreSnapshot.mutateAsync(snapshotNumber);
-    const nextSkillName = result.name;
-
-    if (nextSkillName !== skillName) {
-      await cancelSkillQueries(queryClient, skillName);
-      await navigate({
-        params: { skillName: nextSkillName },
-        search: { path },
-        to: "/skills/$skillName",
-      });
-      removeSkillQueries(queryClient, skillName);
-      await invalidateSkillQueries(queryClient, nextSkillName);
-      return;
-    }
-
-    await invalidateSkillQueries(queryClient, skillName);
+    await restoreSnapshot.mutateAsync(snapshotNumber);
   };
 
   const takeSnapshot: Parameters<

@@ -21,6 +21,14 @@ import {
   restoreManagedSkillSnapshot,
 } from "./requests";
 
+type RestoreSkillSnapshotResult = Awaited<
+  ReturnType<typeof restoreManagedSkillSnapshot>
+>;
+
+interface RestoreSkillSnapshotMutationOptions {
+  onSuccess?: (result: RestoreSkillSnapshotResult) => Promise<void> | void;
+}
+
 const invalidateSkillQueries = async (
   queryClient: ReturnType<typeof useQueryClient>,
   skillName: string | undefined
@@ -82,7 +90,10 @@ export const useCreateSkillSnapshot = (skillName: string | undefined) => {
   });
 };
 
-export const useRestoreSkillSnapshot = (skillName: string | undefined) =>
+export const useRestoreSkillSnapshot = (
+  skillName: string | undefined,
+  options?: RestoreSkillSnapshotMutationOptions
+) =>
   useMutation({
     mutationFn: (snapshotNumber: number) => {
       if (!skillName) {
@@ -90,6 +101,9 @@ export const useRestoreSkillSnapshot = (skillName: string | undefined) =>
       }
 
       return restoreManagedSkillSnapshot(skillName, snapshotNumber);
+    },
+    onSuccess: async (result) => {
+      await options?.onSuccess?.(result);
     },
   });
 
