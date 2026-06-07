@@ -1,5 +1,20 @@
 const apiUrl = process.env.SKILLPACK_DEV_URL ?? "http://localhost:5173";
-const authCookie = process.env.SKILLPACK_AUTH_COOKIE;
+const authCookieName = "better-auth.session_token";
+const authCookieValue = process.env.SKILLPACK_AUTH_COOKIE;
+
+const getAuthCookie = () => {
+  if (!authCookieValue) {
+    return;
+  }
+
+  if (authCookieValue.includes("=")) {
+    return authCookieValue;
+  }
+
+  return `${authCookieName}=${authCookieValue}`;
+};
+
+const authCookie = getAuthCookie();
 
 const skills = [
   {

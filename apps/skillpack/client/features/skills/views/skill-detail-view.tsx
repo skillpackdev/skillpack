@@ -1,4 +1,7 @@
-import type { PatchSkillInput } from "@skillpack/contracts/skills/requests";
+import type {
+  CreateSkillSnapshotInput,
+  PatchSkillInput,
+} from "@skillpack/contracts/skills/requests";
 import type {
   ResolvedSkill,
   SkillSnapshotItem,
@@ -35,6 +38,7 @@ interface SkillDetailViewProps {
   onPathChange: (path: string | undefined) => void;
   onRestoreSnapshot: (snapshotNumber: number) => Promise<void>;
   onSaveChanges: (input: PatchSkillInput) => Promise<void>;
+  onTakeSnapshot: (input: CreateSkillSnapshotInput) => Promise<void>;
 }
 
 const getSaveStatusLabel = (
@@ -180,6 +184,7 @@ export const SkillDetailView = ({
   onPathChange,
   onRestoreSnapshot,
   onSaveChanges,
+  onTakeSnapshot,
 }: SkillDetailViewProps) => {
   const [snapshotSheetOpen, setSnapshotSheetOpen] = useState(false);
   const skillList = useSkillList();
@@ -396,8 +401,10 @@ export const SkillDetailView = ({
         skill={skill}
         snapshots={snapshots}
         snapshotsStatus={snapshotsStatus}
+        canTakeSnapshot={Boolean(skill) && !hasPendingChanges}
         onOpenChange={setSnapshotSheetOpen}
         onRestoreSnapshot={onRestoreSnapshot}
+        onTakeSnapshot={onTakeSnapshot}
       />
     </>
   );

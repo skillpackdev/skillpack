@@ -49,7 +49,7 @@ An agent-facing private `skill://skillpack/{skillName}` locator derived from Ski
 _Avoid_: Numeric ID locator, source-qualified locator, GitHub locator, raw URL, direct download URL, stable version pin
 
 **Skill Snapshot**:
-A user-created or system-created checkpoint of a Managed Skill's state, attached to the stable internal Skill ID. A Skill Snapshot includes the Skill Name, instruction content, descriptive metadata, Skill Origin, and Resource Manifest captured at that moment. Restoring a Skill Snapshot restores the Managed Skill to the captured state, including the captured Skill Name. Restore fails when the captured Skill Name is already used by another Managed Skill in the same user's Library.
+A user-created or system-created checkpoint of a Managed Skill's saved current state, attached to the stable internal Skill ID. A Skill Snapshot includes the Skill Name, instruction content, descriptive metadata, Skill Origin, and Resource Manifest captured at that moment. Restoring a Skill Snapshot restores the Managed Skill to the captured state, including the captured Skill Name. Restore fails when the captured Skill Name is already used by another Managed Skill in the same user's Library.
 _Avoid_: Semver requirement, every keystroke as snapshot, incremental patch, current R2 deduplication, Git ref, Git revision, primary skill state
 
 **Resolved Skill**:

@@ -82,10 +82,8 @@ export const useCreateSkillSnapshot = (skillName: string | undefined) => {
   });
 };
 
-export const useRestoreSkillSnapshot = (skillName: string | undefined) => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
+export const useRestoreSkillSnapshot = (skillName: string | undefined) =>
+  useMutation({
     mutationFn: (snapshotNumber: number) => {
       if (!skillName) {
         throw new Error("Missing Skill Name");
@@ -93,11 +91,7 @@ export const useRestoreSkillSnapshot = (skillName: string | undefined) => {
 
       return restoreManagedSkillSnapshot(skillName, snapshotNumber);
     },
-    onSuccess: async () => {
-      await invalidateSkillQueries(queryClient, skillName);
-    },
   });
-};
 
 export const useForkSkill = () => {
   const queryClient = useQueryClient();

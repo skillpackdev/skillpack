@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { skillsRoute } from "./route";
 import type { SkillService } from "./service";
-import type { ResolvedSkillResult } from "./types";
+import type { ResolvedSkillResult, SkillSnapshotRow } from "./types";
 
 const createApp = (skillService: Partial<SkillService>) =>
   new Hono<AppBindings>()
@@ -14,30 +14,52 @@ const createApp = (skillService: Partial<SkillService>) =>
     })
     .route("/skills", skillsRoute);
 
+const createdAt = new Date("2026-05-25T12:00:00.000Z");
+
 const resolvedSkill = (input?: {
   id?: number;
   name?: string;
-}): ResolvedSkillResult => {
-  const createdAt = new Date("2026-05-25T12:00:00.000Z");
+}): ResolvedSkillResult => ({
+  content: "# Demo\n",
+  resources: [],
+  skill: {
+    allowedTools: "Read",
+    compatibility: null,
+    createdAt,
+    description: "Demo description",
+    id: input?.id ?? 1,
+    license: null,
+    metadata: null,
+    name: input?.name ?? "demo",
+    origin: null,
+    ownerUserId: "user-a",
+    updatedAt: createdAt,
+  },
+});
 
-  return {
-    content: "# Demo\n",
+const skillSnapshot = (input?: {
+  label?: string | null;
+  note?: string | null;
+  snapshotNumber?: number;
+}): SkillSnapshotRow => ({
+  createdAt,
+  id: 7,
+  label: input?.label ?? null,
+  note: input?.note ?? null,
+  skillId: 123,
+  snapshotNumber: input?.snapshotNumber ?? 1,
+  stateJson: {
+    allowedTools: "Read",
+    compatibility: null,
+    description: "Demo description",
+    license: null,
+    metadata: null,
+    name: "demo",
+    origin: null,
     resources: [],
-    skill: {
-      allowedTools: "Read",
-      compatibility: null,
-      createdAt,
-      description: "Demo description",
-      id: input?.id ?? 1,
-      license: null,
-      metadata: null,
-      name: input?.name ?? "demo",
-      origin: null,
-      ownerUserId: "user-a",
-      updatedAt: createdAt,
-    },
-  };
-};
+  },
+  stateVersion: 1,
+});
 
 describe("skillsRoute owner scope", () => {
   it("lists skills without exposing internal Skill IDs", async () => {
@@ -91,6 +113,41 @@ describe("skillsRoute owner scope", () => {
 
     expect(response.status).toBe(400);
     expect(resolveSkillByName).not.toHaveBeenCalled();
+  });
+
+  it("creates snapshots by Skill Name without exposing internal Skill IDs", async () => {
+    const createSkillSnapshotByName = vi
+      .fn<SkillService["createSkillSnapshotByName"]>()
+      .mockResolvedValue(
+        skillSnapshot({
+          label: "Before editing resources",
+          note: "Captured before changing attached files.",
+          snapshotNumber: 3,
+        })
+      );
+    const app = createApp({ createSkillSnapshotByName });
+
+    const response = await app.request("/skills/demo/snapshots", {
+      body: JSON.stringify({
+        label: "Before editing resources",
+        note: "Captured before changing attached files.",
+      }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
+
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toStrictEqual({
+      createdAt: "2026-05-25T12:00:00.000Z",
+      label: "Before editing resources",
+      name: "demo",
+      note: "Captured before changing attached files.",
+      snapshotNumber: 3,
+    });
+    expect(createSkillSnapshotByName).toHaveBeenCalledWith("demo", {
+      label: "Before editing resources",
+      note: "Captured before changing attached files.",
+    });
   });
 
   it("reads resources by Skill Name", async () => {

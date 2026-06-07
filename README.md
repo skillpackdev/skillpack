@@ -138,10 +138,10 @@ pnpm db:migrate:remote
 The current development migration resets Managed Skill tables to the Managed
 Skill model and drops old skill rows. Auth tables are not reset.
 
-Seed local development data while `pnpm dev` is running. The skills API is protected, so pass a session cookie from a local browser login:
+Seed local development data while `pnpm dev` is running. The skills API is protected, so pass the `better-auth.session_token` value from a local browser login:
 
 ```bash
-SKILLPACK_AUTH_COOKIE='better-auth.session_token=...' pnpm db:seed:local
+SKILLPACK_AUTH_COOKIE='...' pnpm db:seed:local
 ```
 
 Deploy:
