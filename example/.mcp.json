@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "skillpack": {
+      "url": "http://localhost:5173/mcp",
+      "directTools": ["skillpack_list", "skillpack_read"]
+    }
+  }
+}
