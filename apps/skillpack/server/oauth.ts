@@ -1,11 +1,11 @@
 import { oauthProviderResourceClient } from "@better-auth/oauth-provider/resource-client";
 
 import { skillReadScope } from "./auth";
+import { getOAuthAudiences, getOAuthResource } from "./oauth-audience";
+
+export { getOAuthAudiences, getOAuthResource } from "./oauth-audience";
 
 export const getRequestOrigin = (url: string) => new URL(url).origin;
-
-export const getOAuthResource = (env: Env, origin: string) =>
-  env.AUTH_BASE_URL ?? origin;
 
 const getBearerToken = (headers: Headers) => {
   const authorization = headers.get("authorization");
@@ -30,12 +30,13 @@ export const getSkillReadBearerUserId = async (
   }
 
   const resource = getOAuthResource(env, origin);
+  const audiences = getOAuthAudiences(env, origin);
   const resourceClient = oauthProviderResourceClient();
   const payload = await resourceClient.getActions().verifyAccessToken(token, {
     jwksUrl: `${resource}/api/auth/jwks`,
     scopes: [skillReadScope],
     verifyOptions: {
-      audience: resource,
+      audience: audiences,
       issuer: resource,
     },
   });
