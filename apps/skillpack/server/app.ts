@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { contextStorage } from "hono/context-storage";
+import { logger } from "hono/logger";
 
 import { createAuth, getLoginProviders } from "./auth";
 import {
@@ -58,6 +59,7 @@ const loginProviders = (c: Context<AppBindings>) =>
 export const createApp = (options: AuthMiddlewareOptions = {}) =>
   new Hono<AppBindings>()
     .use(contextStorage())
+    .use(logger())
     .use(setRequestServices)
     .get(
       "/.well-known/oauth-authorization-server",
