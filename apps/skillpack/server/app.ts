@@ -11,7 +11,11 @@ import {
 import type { AuthMiddlewareOptions } from "./middlewares/auth";
 import { setRequestServices } from "./middlewares/request-services";
 import { mcpRoute } from "./modules/mcp/route";
-import { getProtectedResourceMetadata, getRequestOrigin } from "./oauth";
+import {
+  getMcpProtectedResourceMetadata,
+  getProtectedResourceMetadata,
+  getRequestOrigin,
+} from "./oauth";
 import { apiRoutes } from "./routes";
 import type { AppBindings } from "./types";
 
@@ -42,6 +46,12 @@ const protectedResourceMetadata = async (c: Context<AppBindings>) => {
   return c.json(metadata);
 };
 
+const mcpProtectedResourceMetadata = async (c: Context<AppBindings>) => {
+  const origin = getRequestOrigin(c.req.url);
+  const metadata = await getMcpProtectedResourceMetadata(c.env, origin);
+  return c.json(metadata);
+};
+
 const loginProviders = (c: Context<AppBindings>) =>
   c.json(getLoginProviders(c.env));
 
@@ -54,6 +64,10 @@ export const createApp = (options: AuthMiddlewareOptions = {}) =>
       oauthAuthorizationServerMetadata
     )
     .get("/.well-known/openid-configuration", openIdConfigurationMetadata)
+    .get(
+      "/.well-known/oauth-protected-resource/mcp",
+      mcpProtectedResourceMetadata
+    )
     .get("/.well-known/oauth-protected-resource", protectedResourceMetadata)
     .get("/api/auth/login-providers", loginProviders)
     .on(["GET", "POST"], "/api/auth/*", authHandler)

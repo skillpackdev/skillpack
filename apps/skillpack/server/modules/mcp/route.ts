@@ -85,8 +85,8 @@ const formatSkillpackCatalog = (
 ) => {
   const lines = [
     "The following Skillpack Managed Skills are available through Skill Delivery.",
-    "When a task matches a Skillpack skill, call skillpack_read with its skill:// location.",
-    "Use skillpack_read with a resource path to read attached references, scripts, and assets.",
+    "When a task matches a Skillpack skill, call read_skill with its skill:// location.",
+    "Use read_skill with a resource path to read attached references, scripts, and assets.",
     "",
     "<skillpack_skills>",
   ];
@@ -118,7 +118,7 @@ const createMcpServer = (c: Context<AppBindings>) => {
   );
 
   server.registerTool(
-    "skillpack_list",
+    "list_skills",
     {
       description:
         "List Skillpack Managed Skills available to the authenticated user.",
@@ -148,7 +148,7 @@ const createMcpServer = (c: Context<AppBindings>) => {
   );
 
   server.registerTool(
-    "skillpack_read",
+    "read_skill",
     {
       description:
         "Read a Skillpack skill or one attached resource from a skill:// location.",
