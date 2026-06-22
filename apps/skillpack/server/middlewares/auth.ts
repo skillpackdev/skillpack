@@ -5,6 +5,8 @@ import { SkillRepository } from "@server/modules/skills/repository";
 import { ResourceManifest } from "@server/modules/skills/resource-manifest";
 import { SkillService } from "@server/modules/skills/service";
 import {
+  getMcpOAuthResource,
+  getMcpSkillReadBearerUserId,
   getOAuthResource,
   getSkillReadBearerUserId,
   getRequestOrigin,
@@ -150,17 +152,23 @@ export const createRequireMcpAuth = (
   options: AuthMiddlewareOptions
 ): MiddlewareHandler<AppBindings> => {
   const verifyBearerUserId =
-    options.getSkillReadBearerUserId ?? getSkillReadBearerUserId;
+    options.getSkillReadBearerUserId ?? getMcpSkillReadBearerUserId;
   const setSkillServicesForUser =
     options.setSkillServicesForUser ?? setDefaultSkillServicesForUser;
 
   return createMiddleware<AppBindings>(async (c, next) => {
     const requestOrigin = getRequestOrigin(c.req.url);
     const resource = getOAuthResource(c.env, requestOrigin);
-    const challenge = `Bearer realm="mcp", resource_metadata="${resource}/.well-known/oauth-protected-resource", scope="${skillReadScope}"`;
+    const mcpResource = getMcpOAuthResource(c.env, requestOrigin);
+    const challenge = `Bearer realm="mcp", resource_metadata="${resource}/.well-known/oauth-protected-resource/mcp", scope="${skillReadScope}"`;
     const origin = c.req.header("origin");
 
-    if (origin && origin !== requestOrigin && origin !== resource) {
+    if (
+      origin &&
+      origin !== requestOrigin &&
+      origin !== resource &&
+      origin !== mcpResource
+    ) {
       return c.json({ error: "Forbidden" }, 403);
     }
 

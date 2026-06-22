@@ -244,6 +244,25 @@ describe("app MCP auth", () => {
     },
   };
 
+  it("serves MCP protected resource metadata", async () => {
+    const app = createApp();
+
+    const response = await app.request(
+      "/.well-known/oauth-protected-resource/mcp",
+      undefined,
+      testEnv
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      authorization_servers: ["http://localhost"],
+      bearer_methods_supported: ["header"],
+      resource: "http://localhost/mcp",
+      resource_name: "Skillpack MCP Server",
+      scopes_supported: ["skills:read"],
+    });
+  });
+
   it("challenges unauthenticated MCP requests with Skillpack OAuth metadata", async () => {
     const app = createApp();
 
@@ -262,7 +281,7 @@ describe("app MCP auth", () => {
 
     expect(response.status).toBe(401);
     expect(response.headers.get("www-authenticate")).toBe(
-      'Bearer realm="mcp", resource_metadata="http://localhost/.well-known/oauth-protected-resource", scope="skills:read"'
+      'Bearer realm="mcp", resource_metadata="http://localhost/.well-known/oauth-protected-resource/mcp", scope="skills:read"'
     );
     await expect(response.json()).resolves.toStrictEqual({
       error: "Unauthorized",
@@ -441,14 +460,14 @@ describe("app MCP auth", () => {
       jsonrpc: "2.0",
       result: {
         tools: [
-          expect.objectContaining({ name: "skillpack_list" }),
-          expect.objectContaining({ name: "skillpack_read" }),
+          expect.objectContaining({ name: "list_skills" }),
+          expect.objectContaining({ name: "read_skill" }),
         ],
       },
     });
   });
 
-  it("returns the authenticated Skillpack catalog from skillpack_list", async () => {
+  it("returns the authenticated Skillpack catalog from list_skills", async () => {
     const createdAt = new Date("2026-05-25T12:00:00.000Z");
     const listSkills = vi.fn<SkillService["listSkills"]>().mockResolvedValue([
       {
@@ -481,7 +500,7 @@ describe("app MCP auth", () => {
           id: 3,
           jsonrpc: "2.0",
           method: "tools/call",
-          params: { arguments: {}, name: "skillpack_list" },
+          params: { arguments: {}, name: "list_skills" },
         }),
         headers: {
           accept: "application/json",
@@ -518,7 +537,7 @@ describe("app MCP auth", () => {
     expect(listSkills).toHaveBeenCalledOnce();
   });
 
-  it("returns a Skillpack activation payload from skillpack_read", async () => {
+  it("returns a Skillpack activation payload from read_skill", async () => {
     const createdAt = new Date("2026-05-25T12:00:00.000Z");
     const resolveSkillByName = vi
       .fn<SkillService["resolveSkillByName"]>()
@@ -588,7 +607,7 @@ describe("app MCP auth", () => {
           method: "tools/call",
           params: {
             arguments: { location: "skill://skillpack/demo-skill" },
-            name: "skillpack_read",
+            name: "read_skill",
           },
         }),
         headers: {
@@ -618,7 +637,7 @@ describe("app MCP auth", () => {
     });
   });
 
-  it("returns attached resources from skillpack_read with a path", async () => {
+  it("returns attached resources from read_skill with a path", async () => {
     const readSkillTextFileByName = vi
       .fn<SkillService["readSkillTextFileByName"]>()
       .mockResolvedValue({
@@ -652,7 +671,7 @@ describe("app MCP auth", () => {
               location: "skill://skillpack/demo-skill",
               path: "references/demo.md",
             },
-            name: "skillpack_read",
+            name: "read_skill",
           },
         }),
         headers: {
@@ -678,7 +697,7 @@ describe("app MCP auth", () => {
     });
   });
 
-  it("rejects unsafe skillpack_read resource paths before service lookup", async () => {
+  it("rejects unsafe read_skill resource paths before service lookup", async () => {
     const readSkillTextFileByName =
       vi.fn<SkillService["readSkillTextFileByName"]>();
     const app = createApp({
@@ -703,7 +722,7 @@ describe("app MCP auth", () => {
               location: "skill://skillpack/demo-skill",
               path: "../secret.md",
             },
-            name: "skillpack_read",
+            name: "read_skill",
           },
         }),
         headers: {

@@ -1,9 +1,18 @@
+const appendPath = (baseUrl: string, path: string) =>
+  `${baseUrl.replace(/\/$/u, "")}${path}`;
+
+const getAudiences = (resource: string) => [
+  ...new Set([resource, new URL(resource).href]),
+];
+
 export const getOAuthResource = (env: Env, origin: string) =>
   env.AUTH_BASE_URL ?? origin;
 
-export const getOAuthAudiences = (env: Env, origin: string) => {
-  const resource = getOAuthResource(env, origin);
-  const normalizedResource = new URL(resource).href;
+export const getOAuthAudiences = (env: Env, origin: string) =>
+  getAudiences(getOAuthResource(env, origin));
 
-  return [...new Set([resource, normalizedResource])];
-};
+export const getMcpOAuthResource = (env: Env, origin: string) =>
+  appendPath(getOAuthResource(env, origin), "/mcp");
+
+export const getMcpOAuthAudiences = (env: Env, origin: string) =>
+  getAudiences(getMcpOAuthResource(env, origin));

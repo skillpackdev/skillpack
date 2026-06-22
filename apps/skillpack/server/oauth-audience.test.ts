@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { getOAuthAudiences } from "./oauth-audience";
+import {
+  getMcpOAuthAudiences,
+  getMcpOAuthResource,
+  getOAuthAudiences,
+} from "./oauth-audience";
 
 const baseEnv = {
   BETTER_AUTH_SECRET: "test-secret",
@@ -16,21 +20,24 @@ describe("OAuth audiences", () => {
     ]);
   });
 
-  it("deduplicates resources that already use URL href form", () => {
-    expect(getOAuthAudiences(baseEnv, "http://localhost:5173/")).toStrictEqual([
-      "http://localhost:5173/",
-    ]);
+  it("uses the MCP endpoint as the MCP OAuth resource", () => {
+    expect(getMcpOAuthResource(baseEnv, "http://localhost:5173")).toBe(
+      "http://localhost:5173/mcp"
+    );
   });
 
-  it("uses AUTH_BASE_URL when configured", () => {
+  it("uses AUTH_BASE_URL when building the MCP OAuth resource", () => {
     expect(
-      getOAuthAudiences(
+      getMcpOAuthResource(
         { ...baseEnv, AUTH_BASE_URL: "https://skillpack.example" } as Env,
         "http://localhost:5173"
       )
-    ).toStrictEqual([
-      "https://skillpack.example",
-      "https://skillpack.example/",
-    ]);
+    ).toBe("https://skillpack.example/mcp");
+  });
+
+  it("deduplicates MCP resources that already use URL href form", () => {
+    expect(
+      getMcpOAuthAudiences(baseEnv, "http://localhost:5173/")
+    ).toStrictEqual(["http://localhost:5173/mcp"]);
   });
 });

@@ -2,7 +2,7 @@ import { oauthProvider } from "@better-auth/oauth-provider";
 import { betterAuth } from "better-auth";
 import { genericOAuth, jwt } from "better-auth/plugins";
 
-import { getOAuthAudiences } from "./oauth-audience";
+import { getMcpOAuthAudiences } from "./oauth-audience";
 
 export const skillReadScope = "skills:read";
 export const skillpackOAuthScopes = [
@@ -116,7 +116,7 @@ export const createAuth = (env: Env, origin: string) => {
           oauthAuthServerConfig: true,
           openidConfig: true,
         },
-        validAudiences: getOAuthAudiences(env, origin),
+        validAudiences: getMcpOAuthAudiences(env, origin),
       }),
       ...(oidcConfig
         ? [
