@@ -1,6 +1,7 @@
 import { oauthProviderResourceClient } from "@better-auth/oauth-provider/resource-client";
+import { verifyJwsAccessToken } from "better-auth/oauth2";
 
-import { skillReadScope } from "./auth";
+import { createAuth, skillReadScope } from "./auth";
 import { getMcpOAuthResource, getOAuthResource } from "./oauth-audience";
 
 export { getMcpOAuthResource, getOAuthResource } from "./oauth-audience";
@@ -18,6 +19,9 @@ const getBearerToken = (headers: Headers) => {
   return token || undefined;
 };
 
+const hasScope = (scope: unknown, requiredScope: string) =>
+  typeof scope === "string" && scope.split(" ").includes(requiredScope);
+
 const getBearerUserId = async (
   env: Env,
   origin: string,
@@ -31,15 +35,18 @@ const getBearerUserId = async (
   }
 
   const issuer = getOAuthResource(env, origin);
-  const resourceClient = oauthProviderResourceClient();
-  const payload = await resourceClient.getActions().verifyAccessToken(token, {
-    jwksUrl: `${issuer}/api/auth/jwks`,
-    scopes: [skillReadScope],
+  const auth = createAuth(env, origin);
+  const payload = await verifyJwsAccessToken(token, {
+    jwksFetch: async () => await auth.api.getJwks({ headers }),
     verifyOptions: {
       audience: expectedResource,
       issuer,
     },
   });
+
+  if (!hasScope(payload.scope, skillReadScope)) {
+    return;
+  }
 
   if (typeof payload.sub !== "string" || !payload.sub) {
     return;

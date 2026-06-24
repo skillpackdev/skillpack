@@ -28,6 +28,13 @@ type SetSkillServicesForUser = (
   userId: string
 ) => void;
 
+const getAuthErrorLogPayload = (error: unknown, origin: string) => ({
+  errorMessage: error instanceof Error ? error.message : String(error),
+  errorName: error instanceof Error ? error.name : typeof error,
+  event: "skillpack.mcp.auth.verify_failed",
+  origin,
+});
+
 export interface AuthMiddlewareOptions {
   getSkillReadBearerUserId?: typeof getSkillReadBearerUserId;
   setSkillServicesForUser?: SetSkillServicesForUser;
@@ -185,7 +192,10 @@ export const createRequireMcpAuth = (
         requestOrigin,
         c.req.raw.headers
       );
-    } catch {
+    } catch (error) {
+      console.warn(
+        JSON.stringify(getAuthErrorLogPayload(error, requestOrigin))
+      );
       c.header("WWW-Authenticate", challenge);
       return c.json({ error: "Unauthorized" }, 401);
     }
