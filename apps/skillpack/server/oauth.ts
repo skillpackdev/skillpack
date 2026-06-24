@@ -1,19 +1,9 @@
 import { oauthProviderResourceClient } from "@better-auth/oauth-provider/resource-client";
 
 import { skillReadScope } from "./auth";
-import {
-  getMcpOAuthAudiences,
-  getMcpOAuthResource,
-  getOAuthAudiences,
-  getOAuthResource,
-} from "./oauth-audience";
+import { getMcpOAuthResource, getOAuthResource } from "./oauth-audience";
 
-export {
-  getMcpOAuthAudiences,
-  getMcpOAuthResource,
-  getOAuthAudiences,
-  getOAuthResource,
-} from "./oauth-audience";
+export { getMcpOAuthResource, getOAuthResource } from "./oauth-audience";
 
 export const getRequestOrigin = (url: string) => new URL(url).origin;
 
@@ -32,7 +22,7 @@ const getBearerUserId = async (
   env: Env,
   origin: string,
   headers: Headers,
-  audiences: string[]
+  expectedResource: string
 ) => {
   const token = getBearerToken(headers);
 
@@ -40,14 +30,15 @@ const getBearerUserId = async (
     return;
   }
 
-  const resource = getOAuthResource(env, origin);
+  const issuer = getOAuthResource(env, origin);
+  const audiences = [expectedResource, `${expectedResource}/`];
   const resourceClient = oauthProviderResourceClient();
   const payload = await resourceClient.getActions().verifyAccessToken(token, {
-    jwksUrl: `${resource}/api/auth/jwks`,
+    jwksUrl: `${issuer}/api/auth/jwks`,
     scopes: [skillReadScope],
     verifyOptions: {
       audience: audiences,
-      issuer: resource,
+      issuer,
     },
   });
 
@@ -62,13 +53,13 @@ export const getSkillReadBearerUserId = (
   env: Env,
   origin: string,
   headers: Headers
-) => getBearerUserId(env, origin, headers, getOAuthAudiences(env, origin));
+) => getBearerUserId(env, origin, headers, getOAuthResource(env, origin));
 
 export const getMcpSkillReadBearerUserId = (
   env: Env,
   origin: string,
   headers: Headers
-) => getBearerUserId(env, origin, headers, getMcpOAuthAudiences(env, origin));
+) => getBearerUserId(env, origin, headers, getMcpOAuthResource(env, origin));
 
 const getResourceMetadata = async (resource: string, resourceName: string) => {
   const resourceClient = oauthProviderResourceClient();
