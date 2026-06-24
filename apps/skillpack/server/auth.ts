@@ -116,9 +116,7 @@ export const createAuth = (env: Env, origin: string) => {
           oauthAuthServerConfig: true,
           openidConfig: true,
         },
-        validAudiences: ((resource) => [resource, `${resource}/`])(
-          getMcpOAuthResource(env, origin)
-        ),
+        validAudiences: [getMcpOAuthResource(env, origin)],
       }),
       ...(oidcConfig
         ? [
