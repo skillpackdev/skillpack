@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  getMcpOAuthAudiences,
-  getMcpOAuthResource,
-  getOAuthAudiences,
-} from "./oauth-audience";
+import { getMcpOAuthResource, getOAuthResource } from "./oauth-audience";
 
 const baseEnv = {
   BETTER_AUTH_SECRET: "test-secret",
@@ -12,32 +8,34 @@ const baseEnv = {
   DB: {},
 } as Env;
 
-describe("OAuth audiences", () => {
-  it("accepts the configured resource and the URL href form", () => {
-    expect(getOAuthAudiences(baseEnv, "http://localhost:5173")).toStrictEqual([
-      "http://localhost:5173",
-      "http://localhost:5173/",
-    ]);
+describe("OAuth resource", () => {
+  it("returns the origin without trailing slash", () => {
+    expect(getOAuthResource(baseEnv, "http://localhost:5173")).toBe(
+      "http://localhost:5173"
+    );
+    expect(getOAuthResource(baseEnv, "http://localhost:5173/")).toBe(
+      "http://localhost:5173"
+    );
   });
 
-  it("uses the MCP endpoint as the MCP OAuth resource", () => {
+  it("strips the trailing slash from AUTH_BASE_URL", () => {
+    expect(
+      getOAuthResource(
+        { ...baseEnv, AUTH_BASE_URL: "https://skillpack.example/" } as Env,
+        "http://localhost:5173"
+      )
+    ).toBe("https://skillpack.example");
+  });
+
+  it("appends /mcp to the base resource", () => {
     expect(getMcpOAuthResource(baseEnv, "http://localhost:5173")).toBe(
       "http://localhost:5173/mcp"
     );
   });
 
-  it("uses AUTH_BASE_URL when building the MCP OAuth resource", () => {
-    expect(
-      getMcpOAuthResource(
-        { ...baseEnv, AUTH_BASE_URL: "https://skillpack.example" } as Env,
-        "http://localhost:5173"
-      )
-    ).toBe("https://skillpack.example/mcp");
-  });
-
-  it("deduplicates MCP resources that already use URL href form", () => {
-    expect(
-      getMcpOAuthAudiences(baseEnv, "http://localhost:5173/")
-    ).toStrictEqual(["http://localhost:5173/mcp"]);
+  it("does not double the trailing slash when origin already has one", () => {
+    expect(getMcpOAuthResource(baseEnv, "http://localhost:5173/")).toBe(
+      "http://localhost:5173/mcp"
+    );
   });
 });
