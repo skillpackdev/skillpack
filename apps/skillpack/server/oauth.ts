@@ -31,13 +31,12 @@ const getBearerUserId = async (
   }
 
   const issuer = getOAuthResource(env, origin);
-  const audiences = [expectedResource, `${expectedResource}/`];
   const resourceClient = oauthProviderResourceClient();
   const payload = await resourceClient.getActions().verifyAccessToken(token, {
     jwksUrl: `${issuer}/api/auth/jwks`,
     scopes: [skillReadScope],
     verifyOptions: {
-      audience: audiences,
+      audience: expectedResource,
       issuer,
     },
   });
