@@ -1,4 +1,4 @@
-import { createAuth, skillReadScope } from "@server/auth";
+import { createAuth, skillpackOAuthScopes } from "@server/auth";
 import type { AuthSession } from "@server/auth";
 import { apiError } from "@server/lib/http";
 import { SkillRepository } from "@server/modules/skills/repository";
@@ -160,7 +160,7 @@ export const createRequireMcpAuth = (
     const requestOrigin = getRequestOrigin(c.req.url);
     const resource = getOAuthResource(c.env, requestOrigin);
     const mcpResource = getMcpOAuthResource(c.env, requestOrigin);
-    const challenge = `Bearer realm="mcp", resource_metadata="${resource}/.well-known/oauth-protected-resource/mcp", scope="${skillReadScope}"`;
+    const challenge = `Bearer realm="mcp", resource_metadata="${resource}/.well-known/oauth-protected-resource/mcp", scope="${skillpackOAuthScopes.join(" ")}"`;
     const origin = c.req.header("origin");
 
     if (

@@ -259,7 +259,7 @@ describe("app MCP auth", () => {
       bearer_methods_supported: ["header"],
       resource: "http://localhost/mcp",
       resource_name: "Skillpack MCP Server",
-      scopes_supported: ["skills:read"],
+      scopes_supported: ["offline_access", "skills:read"],
     });
   });
 
@@ -281,7 +281,7 @@ describe("app MCP auth", () => {
 
     expect(response.status).toBe(401);
     expect(response.headers.get("www-authenticate")).toBe(
-      'Bearer realm="mcp", resource_metadata="http://localhost/.well-known/oauth-protected-resource/mcp", scope="skills:read"'
+      'Bearer realm="mcp", resource_metadata="http://localhost/.well-known/oauth-protected-resource/mcp", scope="openid offline_access skills:read"'
     );
     await expect(response.json()).resolves.toStrictEqual({
       error: "Unauthorized",

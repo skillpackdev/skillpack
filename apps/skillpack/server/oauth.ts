@@ -19,6 +19,11 @@ const getBearerToken = (headers: Headers) => {
   return token || undefined;
 };
 
+export const mcpProtectedResourceScopes = [
+  "offline_access",
+  skillReadScope,
+] as const;
+
 const hasScope = (scope: unknown, requiredScope: string) =>
   typeof scope === "string" && scope.split(" ").includes(requiredScope);
 
@@ -93,5 +98,26 @@ export const getProtectedResourceMetadata = (env: Env, origin: string) =>
     "Skillpack Managed Skills"
   );
 
-export const getMcpProtectedResourceMetadata = (env: Env, origin: string) =>
-  getResourceMetadata(getMcpOAuthResource(env, origin), "Skillpack MCP Server");
+export const getMcpProtectedResourceMetadata = async (
+  env: Env,
+  origin: string
+) => {
+  const resourceClient = oauthProviderResourceClient();
+  const resource = getMcpOAuthResource(env, origin);
+  const authorizationServer = new URL("/", resource).href.replace(/\/$/u, "");
+
+  return await resourceClient.getActions().getProtectedResourceMetadata(
+    {
+      authorization_servers: [authorizationServer],
+      bearer_methods_supported: ["header"],
+      jwks_uri: `${authorizationServer}/api/auth/jwks`,
+      resource,
+      resource_name: "Skillpack MCP Server",
+      scopes_supported: [...mcpProtectedResourceScopes],
+    },
+    {
+      externalScopes: [...mcpProtectedResourceScopes],
+      silenceWarnings: { oidcScopes: true },
+    }
+  );
+};
