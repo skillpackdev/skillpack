@@ -9,6 +9,9 @@ import type { ResolvedSkillResult } from "./modules/skills/types";
 type VerifySkillReadBearerUserId = NonNullable<
   NonNullable<Parameters<typeof createApp>[0]>["getSkillReadBearerUserId"]
 >;
+type VerifyApiKeyUserId = NonNullable<
+  NonNullable<Parameters<typeof createApp>[0]>["getApiKeyUserId"]
+>;
 
 const testEnv = {
   BETTER_AUTH_SECRET: "test-secret",
@@ -344,6 +347,106 @@ describe("app MCP auth", () => {
     });
     expect(getSkillReadBearerUserId).toHaveBeenCalledOnce();
     expect(seenUserIds).toStrictEqual(["user-oauth"]);
+  });
+
+  it("allows API keys to initialize MCP", async () => {
+    const seenUserIds: string[] = [];
+    const getApiKeyUserId = vi
+      .fn<VerifyApiKeyUserId>()
+      .mockResolvedValue("user-api-key");
+    const getSkillReadBearerUserId = vi.fn<VerifySkillReadBearerUserId>();
+    const app = createApp({
+      getApiKeyUserId,
+      getSkillReadBearerUserId,
+      setSkillServicesForUser: setSkillServicesForUser({}, seenUserIds),
+    });
+
+    const response = await app.request(
+      "/mcp",
+      {
+        body: JSON.stringify(initializeRequest),
+        headers: {
+          accept: "application/json",
+          authorization: "Bearer skp_test_api_key",
+          "content-type": "application/json",
+        },
+        method: "POST",
+      },
+      testEnv
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      id: 1,
+      jsonrpc: "2.0",
+      result: {
+        serverInfo: { name: "skillpack-mcp" },
+      },
+    });
+    expect(getApiKeyUserId).toHaveBeenCalledWith("skp_test_api_key");
+    expect(getSkillReadBearerUserId).not.toHaveBeenCalled();
+    expect(seenUserIds).toStrictEqual(["user-api-key"]);
+  });
+
+  it("rejects API keys when verification fails", async () => {
+    const getApiKeyUserId = vi.fn<VerifyApiKeyUserId>();
+    const getSkillReadBearerUserId = vi.fn<VerifySkillReadBearerUserId>();
+    const app = createApp({ getApiKeyUserId, getSkillReadBearerUserId });
+
+    const response = await app.request(
+      "/mcp",
+      {
+        body: JSON.stringify(initializeRequest),
+        headers: {
+          accept: "application/json",
+          authorization: "Bearer skp_bad_api_key",
+          "content-type": "application/json",
+        },
+        method: "POST",
+      },
+      testEnv
+    );
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get("www-authenticate")).toContain(
+      'Bearer realm="mcp"'
+    );
+    expect(getApiKeyUserId).toHaveBeenCalledWith("skp_bad_api_key");
+    expect(getSkillReadBearerUserId).not.toHaveBeenCalled();
+  });
+
+  it("does not allow API keys to manage API keys", async () => {
+    const getApiKeyUserId = vi
+      .fn<VerifyApiKeyUserId>()
+      .mockResolvedValue("user-api-key");
+    const app = createApp({ getApiKeyUserId });
+
+    const response = await app.request(
+      "/api/v1/api-keys",
+      { headers: { authorization: "Bearer skp_test_api_key" } },
+      testEnv
+    );
+
+    expect(response.status).toBe(401);
+    expect(getApiKeyUserId).not.toHaveBeenCalled();
+  });
+
+  it("does not allow API keys to call REST skill APIs", async () => {
+    const getApiKeyUserId = vi
+      .fn<VerifyApiKeyUserId>()
+      .mockResolvedValue("user-api-key");
+    const getSkillReadBearerUserId = vi.fn<VerifySkillReadBearerUserId>();
+    const app = createApp({ getApiKeyUserId, getSkillReadBearerUserId });
+
+    const response = await app.request(
+      "/api/v1/skills",
+      { headers: { authorization: "Bearer skp_test_api_key" } },
+      testEnv
+    );
+
+    expect(response.status).toBe(401);
+    expect(getApiKeyUserId).not.toHaveBeenCalled();
+    expect(getSkillReadBearerUserId).toHaveBeenCalledOnce();
   });
 
   it("rejects MCP requests when bearer verification fails", async () => {

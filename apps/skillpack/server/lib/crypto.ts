@@ -5,3 +5,15 @@ export const digestHex = async (value: string) => {
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
 };
+
+const base64UrlAlphabet =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+
+export const randomToken = (byteLength: number) => {
+  const bytes = new Uint8Array(byteLength);
+  crypto.getRandomValues(bytes);
+
+  return [...bytes]
+    .map((byte) => base64UrlAlphabet[byte % base64UrlAlphabet.length])
+    .join("");
+};

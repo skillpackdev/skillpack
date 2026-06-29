@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./api-keys/requests": "./src/api-keys/requests.ts",
+    "./api-keys/responses": "./src/api-keys/responses.ts",
     "./origins/requests": "./src/origins/requests.ts",
     "./origins/responses": "./src/origins/responses.ts",
     "./skills/requests": "./src/skills/requests.ts",

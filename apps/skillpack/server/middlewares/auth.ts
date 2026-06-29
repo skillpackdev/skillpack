@@ -1,6 +1,7 @@
 import { createAuth, skillpackOAuthScopes } from "@server/auth";
 import type { AuthSession } from "@server/auth";
 import { apiError } from "@server/lib/http";
+import { isSkillpackApiKeySecret } from "@server/modules/api-keys/service";
 import { SkillRepository } from "@server/modules/skills/repository";
 import { ResourceManifest } from "@server/modules/skills/resource-manifest";
 import { SkillService } from "@server/modules/skills/service";
@@ -28,10 +29,23 @@ type SetSkillServicesForUser = (
   userId: string
 ) => void;
 
+type VerifyApiKeyUserId = (secret: string) => Promise<string | undefined>;
+
 export interface AuthMiddlewareOptions {
+  getApiKeyUserId?: VerifyApiKeyUserId;
   getSkillReadBearerUserId?: typeof getSkillReadBearerUserId;
   setSkillServicesForUser?: SetSkillServicesForUser;
 }
+
+const getBearerToken = (c: Context<AppBindings>) => {
+  const authorization = c.req.header("authorization");
+
+  if (!authorization?.startsWith("Bearer ")) {
+    return;
+  }
+
+  return authorization.slice("Bearer ".length).trim();
+};
 
 const setDefaultSkillServicesForUser = (
   c: Context<AppBindings>,
@@ -155,6 +169,7 @@ export const createRequireMcpAuth = (
     options.getSkillReadBearerUserId ?? getMcpSkillReadBearerUserId;
   const setSkillServicesForUser =
     options.setSkillServicesForUser ?? setDefaultSkillServicesForUser;
+  const verifyApiKeyUserId = options.getApiKeyUserId;
 
   return createMiddleware<AppBindings>(async (c, next) => {
     const requestOrigin = getRequestOrigin(c.req.url);
@@ -172,22 +187,30 @@ export const createRequireMcpAuth = (
       return c.json({ error: "Forbidden" }, 403);
     }
 
-    if (!c.req.header("authorization")?.startsWith("Bearer ")) {
+    const token = getBearerToken(c);
+
+    if (!token) {
       c.header("WWW-Authenticate", challenge);
       return c.json({ error: "Unauthorized" }, 401);
     }
 
     let userId: string | undefined;
 
-    try {
-      userId = await verifyBearerUserId(
-        c.env,
-        requestOrigin,
-        c.req.raw.headers
-      );
-    } catch {
-      c.header("WWW-Authenticate", challenge);
-      return c.json({ error: "Unauthorized" }, 401);
+    if (isSkillpackApiKeySecret(token)) {
+      userId = verifyApiKeyUserId
+        ? await verifyApiKeyUserId(token)
+        : await c.var.apiKeyService.verifyApiKeySecret(token);
+    } else {
+      try {
+        userId = await verifyBearerUserId(
+          c.env,
+          requestOrigin,
+          c.req.raw.headers
+        );
+      } catch {
+        c.header("WWW-Authenticate", challenge);
+        return c.json({ error: "Unauthorized" }, 401);
+      }
     }
 
     if (!userId) {

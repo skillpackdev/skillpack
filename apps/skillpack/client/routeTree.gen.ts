@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteImport } from "./routes/_authenticated";
 import { Route as IndexRouteImport } from "./routes/index";
 import { Route as OauthConsentRouteImport } from "./routes/oauth.consent";
 import { Route as AuthenticatedSkillsRouteImport } from "./routes/_authenticated/skills";
+import { Route as AuthenticatedSettingsRouteImport } from "./routes/_authenticated/settings";
 import { Route as AuthenticatedCreateSkillRouteImport } from "./routes/_authenticated/create-skill";
 import { Route as AuthenticatedAddSkillRouteImport } from "./routes/_authenticated/add-skill";
 import { Route as AuthenticatedSkillsIndexRouteImport } from "./routes/_authenticated/skills.index";
@@ -42,6 +43,11 @@ const OauthConsentRoute = OauthConsentRouteImport.update({
 const AuthenticatedSkillsRoute = AuthenticatedSkillsRouteImport.update({
   id: "/skills",
   path: "/skills",
+  getParentRoute: () => AuthenticatedRoute,
+} as any);
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: "/settings",
+  path: "/settings",
   getParentRoute: () => AuthenticatedRoute,
 } as any);
 const AuthenticatedCreateSkillRoute =
@@ -79,6 +85,7 @@ export interface FileRoutesByFullPath {
   "/login": typeof LoginRoute;
   "/add-skill": typeof AuthenticatedAddSkillRoute;
   "/create-skill": typeof AuthenticatedCreateSkillRoute;
+  "/settings": typeof AuthenticatedSettingsRoute;
   "/skills": typeof AuthenticatedSkillsRouteWithChildren;
   "/oauth/consent": typeof OauthConsentRoute;
   "/skills/$skillName": typeof AuthenticatedSkillsSkillNameRouteWithChildren;
@@ -90,6 +97,7 @@ export interface FileRoutesByTo {
   "/login": typeof LoginRoute;
   "/add-skill": typeof AuthenticatedAddSkillRoute;
   "/create-skill": typeof AuthenticatedCreateSkillRoute;
+  "/settings": typeof AuthenticatedSettingsRoute;
   "/oauth/consent": typeof OauthConsentRoute;
   "/skills/$skillName": typeof AuthenticatedSkillsSkillNameRouteWithChildren;
   "/skills": typeof AuthenticatedSkillsIndexRoute;
@@ -102,6 +110,7 @@ export interface FileRoutesById {
   "/login": typeof LoginRoute;
   "/_authenticated/add-skill": typeof AuthenticatedAddSkillRoute;
   "/_authenticated/create-skill": typeof AuthenticatedCreateSkillRoute;
+  "/_authenticated/settings": typeof AuthenticatedSettingsRoute;
   "/_authenticated/skills": typeof AuthenticatedSkillsRouteWithChildren;
   "/oauth/consent": typeof OauthConsentRoute;
   "/_authenticated/skills/$skillName": typeof AuthenticatedSkillsSkillNameRouteWithChildren;
@@ -115,6 +124,7 @@ export interface FileRouteTypes {
     | "/login"
     | "/add-skill"
     | "/create-skill"
+    | "/settings"
     | "/skills"
     | "/oauth/consent"
     | "/skills/$skillName"
@@ -126,6 +136,7 @@ export interface FileRouteTypes {
     | "/login"
     | "/add-skill"
     | "/create-skill"
+    | "/settings"
     | "/oauth/consent"
     | "/skills/$skillName"
     | "/skills"
@@ -137,6 +148,7 @@ export interface FileRouteTypes {
     | "/login"
     | "/_authenticated/add-skill"
     | "/_authenticated/create-skill"
+    | "/_authenticated/settings"
     | "/_authenticated/skills"
     | "/oauth/consent"
     | "/_authenticated/skills/$skillName"
@@ -186,6 +198,13 @@ declare module "@tanstack/react-router" {
       path: "/skills";
       fullPath: "/skills";
       preLoaderRoute: typeof AuthenticatedSkillsRouteImport;
+      parentRoute: typeof AuthenticatedRoute;
+    };
+    "/_authenticated/settings": {
+      id: "/_authenticated/settings";
+      path: "/settings";
+      fullPath: "/settings";
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport;
       parentRoute: typeof AuthenticatedRoute;
     };
     "/_authenticated/create-skill": {
@@ -258,12 +277,14 @@ const AuthenticatedSkillsRouteWithChildren =
 interface AuthenticatedRouteChildren {
   AuthenticatedAddSkillRoute: typeof AuthenticatedAddSkillRoute;
   AuthenticatedCreateSkillRoute: typeof AuthenticatedCreateSkillRoute;
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute;
   AuthenticatedSkillsRoute: typeof AuthenticatedSkillsRouteWithChildren;
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAddSkillRoute: AuthenticatedAddSkillRoute,
   AuthenticatedCreateSkillRoute: AuthenticatedCreateSkillRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSkillsRoute: AuthenticatedSkillsRouteWithChildren,
 };
 

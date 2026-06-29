@@ -73,6 +73,8 @@ export const createApp = (options: AuthMiddlewareOptions = {}) =>
     .get("/.well-known/oauth-protected-resource", protectedResourceMetadata)
     .get("/api/auth/login-providers", loginProviders)
     .on(["GET", "POST"], "/api/auth/*", authHandler)
+    .use("/api/v1/api-keys", createRequireSessionAuth())
+    .use("/api/v1/api-keys/*", createRequireSessionAuth())
     .use("/api/v1/origins", createRequireSessionAuth())
     .use("/api/v1/origins/*", createRequireSessionAuth())
     .use("/api/v1/skills/*", createRequireSkillsAuth(options))

@@ -116,6 +116,25 @@ export const skillSnapshotsRelations = relations(
   })
 );
 
+export const apiKeysTable = sqliteTable(
+  "api_keys",
+  {
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+    id: text("id").primaryKey().notNull(),
+    keyHash: text("key_hash").notNull(),
+    keyHint: text("key_hint").notNull(),
+    lastUsedAt: integer("last_used_at", { mode: "timestamp_ms" }),
+    name: text("name").notNull(),
+    ownerUserId: text("owner_user_id").notNull(),
+    revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
+  },
+  (table) => ({
+    apiKeyHashUnique: uniqueIndex("api_keys_key_hash_unique").on(table.keyHash),
+    apiKeyOwnerIndex: index("api_keys_owner_user_id_idx").on(table.ownerUserId),
+  })
+);
+
 export const jwksTable = sqliteTable("jwks", {
   createdAt: integer("createdAt", { mode: "timestamp_ms" }).notNull(),
   expiresAt: integer("expiresAt", { mode: "timestamp_ms" }),
