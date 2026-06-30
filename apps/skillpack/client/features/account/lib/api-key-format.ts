@@ -1,14 +1,17 @@
-const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
+import { format, formatDistanceToNow, isThisYear } from "date-fns";
 
 export const formatApiKeyDate = (value: string | null): string => {
   if (!value) {
     return "Never";
   }
 
-  return dateTimeFormatter.format(new Date(value));
+  return formatDistanceToNow(new Date(value), { addSuffix: true });
+};
+
+export const formatApiKeyExpirationDate = (value: string): string => {
+  const date = new Date(value);
+
+  return format(date, isThisYear(date) ? "MMM d" : "MMM d, yyyy");
 };
 
 export const getApiKeyStatus = (
@@ -27,20 +30,19 @@ export const getApiKeyStatus = (
   return "active";
 };
 
-export const toDateTimeLocalInputValue = (date: Date): string => {
+export const toDateInputValue = (date: Date): string => {
   const offsetMs = date.getTimezoneOffset() * 60_000;
   const localDate = new Date(date.getTime() - offsetMs);
 
-  return localDate.toISOString().slice(0, 16);
+  return localDate.toISOString().slice(0, 10);
 };
 
 export const getDefaultApiKeyExpirationInput = (now = new Date()): string => {
   const expiresAt = new Date(now);
   expiresAt.setMonth(expiresAt.getMonth() + 3);
-  expiresAt.setMinutes(0, 0, 0);
 
-  return toDateTimeLocalInputValue(expiresAt);
+  return toDateInputValue(expiresAt);
 };
 
-export const dateTimeLocalInputToIso = (value: string): string =>
-  new Date(value).toISOString();
+export const dateInputToIso = (value: string): string =>
+  new Date(`${value}T00:00:00`).toISOString();

@@ -1,5 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { LibraryIcon, LogOutIcon, SettingsIcon } from "lucide-react";
+import { KeyRoundIcon, LibraryIcon } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -14,20 +14,14 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { signOut } from "@/shared/auth/client";
 import type { Session } from "@/shared/auth/client";
-
-const signOutAndRedirect = async () => {
-  await signOut(() => {
-    window.location.assign("/login");
-  });
-};
 
 export const AppSidebar = ({ session }: { session: Session }) => {
   const pathname = useLocation({ select: (location) => location.pathname });
   const { setOpenMobile } = useSidebar();
   const isManagedSkillsActive = pathname.startsWith("/skills");
-  const isSettingsActive = pathname.startsWith("/settings");
+  const isProfileActive = pathname === "/profile" || pathname === "/profile/";
+  const isApiKeysActive = pathname.startsWith("/profile/api-keys");
   const userName = session.user.name ?? "Account";
   const userImage = session.user.image;
   const userInitial = userName.trim().charAt(0).toUpperCase() || "A";
@@ -58,19 +52,6 @@ export const AppSidebar = ({ session }: { session: Session }) => {
                   <span>Library</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={isSettingsActive}
-                  size="lg"
-                  tooltip="Settings"
-                  className="font-medium"
-                  render={<Link to="/settings" />}
-                  onClick={() => setOpenMobile(false)}
-                >
-                  <SettingsIcon />
-                  <span>Settings</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -79,24 +60,32 @@ export const AppSidebar = ({ session }: { session: Session }) => {
       <SidebarFooter className="border-t border-sidebar-border p-3">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" className="font-medium">
+            <SidebarMenuButton
+              isActive={isApiKeysActive}
+              size="lg"
+              tooltip="API keys"
+              className="font-medium"
+              render={<Link to="/profile/api-keys" />}
+              onClick={() => setOpenMobile(false)}
+            >
+              <KeyRoundIcon />
+              <span>API keys</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              isActive={isProfileActive}
+              size="lg"
+              tooltip="Profile"
+              className="font-medium"
+              render={<Link to="/profile" />}
+              onClick={() => setOpenMobile(false)}
+            >
               <Avatar size="sm">
                 {userImage ? <AvatarImage src={userImage} alt="" /> : null}
                 <AvatarFallback>{userInitial}</AvatarFallback>
               </Avatar>
               <span>{userName}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              size="lg"
-              className="font-medium"
-              onClick={() => {
-                void signOutAndRedirect();
-              }}
-            >
-              <LogOutIcon data-icon="inline-start" />
-              <span>Sign out</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
