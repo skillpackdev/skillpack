@@ -39,7 +39,7 @@ describe("API key service", () => {
     const d1 = (await mf.getD1Database("DB")) as unknown as D1Database;
     await applyMigration(
       d1,
-      join(process.cwd(), "migrations/0002_silky_lizard.sql")
+      join(process.cwd(), "migrations/0002_api_keys.sql")
     );
 
     db = createDb(d1);
