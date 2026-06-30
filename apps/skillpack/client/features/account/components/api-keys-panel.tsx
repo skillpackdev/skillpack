@@ -32,6 +32,8 @@ import {
   formatApiKeyDate,
   formatApiKeyExpirationDate,
   getDefaultApiKeyExpirationInput,
+  getMaxApiKeyExpirationInput,
+  getMinApiKeyExpirationInput,
 } from "../lib/api-key-format";
 import { ApiKeySecretDialog } from "./api-key-secret-dialog";
 
@@ -43,6 +45,8 @@ export const ApiKeysPanel = ({ apiKeys }: ApiKeysPanelProps) => {
   const createApiKey = useCreateApiKey();
   const revokeApiKey = useRevokeApiKey();
   const defaultExpiresAt = useMemo(() => getDefaultApiKeyExpirationInput(), []);
+  const maxExpiresAt = useMemo(() => getMaxApiKeyExpirationInput(), []);
+  const minExpiresAt = useMemo(() => getMinApiKeyExpirationInput(), []);
   const visibleApiKeys = apiKeys.filter((apiKey) => !apiKey.revokedAt);
   const [createFormOpen, setCreateFormOpen] = useState(false);
   const [name, setName] = useState("");
@@ -120,6 +124,8 @@ export const ApiKeysPanel = ({ apiKeys }: ApiKeysPanelProps) => {
                       id="api-key-expires-at"
                       type="date"
                       value={expiresAt}
+                      min={minExpiresAt}
+                      max={maxExpiresAt}
                       onChange={(event) => setExpiresAt(event.target.value)}
                       required
                     />

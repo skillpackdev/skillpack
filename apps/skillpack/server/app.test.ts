@@ -367,7 +367,7 @@ describe("app MCP auth", () => {
         body: JSON.stringify(initializeRequest),
         headers: {
           accept: "application/json",
-          authorization: "Bearer skp_test_api_key",
+          authorization: "Bearer skp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
           "content-type": "application/json",
         },
         method: "POST",
@@ -383,7 +383,9 @@ describe("app MCP auth", () => {
         serverInfo: { name: "skillpack-mcp" },
       },
     });
-    expect(getApiKeyUserId).toHaveBeenCalledWith("skp_test_api_key");
+    expect(getApiKeyUserId).toHaveBeenCalledWith(
+      "skp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    );
     expect(getSkillReadBearerUserId).not.toHaveBeenCalled();
     expect(seenUserIds).toStrictEqual(["user-api-key"]);
   });
@@ -399,7 +401,7 @@ describe("app MCP auth", () => {
         body: JSON.stringify(initializeRequest),
         headers: {
           accept: "application/json",
-          authorization: "Bearer skp_bad_api_key",
+          authorization: "Bearer skp_BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
           "content-type": "application/json",
         },
         method: "POST",
@@ -411,7 +413,9 @@ describe("app MCP auth", () => {
     expect(response.headers.get("www-authenticate")).toContain(
       'Bearer realm="mcp"'
     );
-    expect(getApiKeyUserId).toHaveBeenCalledWith("skp_bad_api_key");
+    expect(getApiKeyUserId).toHaveBeenCalledWith(
+      "skp_BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+    );
     expect(getSkillReadBearerUserId).not.toHaveBeenCalled();
   });
 

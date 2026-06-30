@@ -14,22 +14,6 @@ export const formatApiKeyExpirationDate = (value: string): string => {
   return format(date, isThisYear(date) ? "MMM d" : "MMM d, yyyy");
 };
 
-export const getApiKeyStatus = (
-  expiresAt: string,
-  revokedAt: string | null,
-  now = new Date()
-): "active" | "expired" | "revoked" => {
-  if (revokedAt) {
-    return "revoked";
-  }
-
-  if (new Date(expiresAt) <= now) {
-    return "expired";
-  }
-
-  return "active";
-};
-
 export const toDateInputValue = (date: Date): string => {
   const offsetMs = date.getTimezoneOffset() * 60_000;
   const localDate = new Date(date.getTime() - offsetMs);
@@ -37,9 +21,19 @@ export const toDateInputValue = (date: Date): string => {
   return localDate.toISOString().slice(0, 10);
 };
 
+export const getMinApiKeyExpirationInput = (now = new Date()): string =>
+  toDateInputValue(now);
+
 export const getDefaultApiKeyExpirationInput = (now = new Date()): string => {
   const expiresAt = new Date(now);
   expiresAt.setMonth(expiresAt.getMonth() + 3);
+
+  return toDateInputValue(expiresAt);
+};
+
+export const getMaxApiKeyExpirationInput = (now = new Date()): string => {
+  const expiresAt = new Date(now);
+  expiresAt.setFullYear(expiresAt.getFullYear() + 1);
 
   return toDateInputValue(expiresAt);
 };

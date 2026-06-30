@@ -9,6 +9,8 @@ const apiKeyPrefix = "skp_";
 const apiKeySecretLength = 40;
 const keyHintPrefixLength = 12;
 const keyHintSuffixLength = 6;
+const lastUsedAtUpdateIntervalMs = 60 * 60 * 1000;
+const apiKeySecretPattern = /^skp_[A-Za-z0-9_-]{40}$/u;
 
 const createApiKeyId = () => `key_${randomToken(24)}`;
 
@@ -16,10 +18,17 @@ const createApiKeySecret = () =>
   `${apiKeyPrefix}${randomToken(apiKeySecretLength)}`;
 
 export const isSkillpackApiKeySecret = (value: string) =>
-  value.startsWith(apiKeyPrefix);
+  apiKeySecretPattern.test(value);
 
 const createKeyHint = (secret: string) =>
   `${secret.slice(0, keyHintPrefixLength)}...${secret.slice(-keyHintSuffixLength)}`;
+
+const getMaxApiKeyExpiration = (now: Date) => {
+  const maxExpiration = new Date(now);
+  maxExpiration.setFullYear(maxExpiration.getFullYear() + 1);
+
+  return maxExpiration;
+};
 
 export class ApiKeyService {
   private readonly repository: ApiKeyRepository;
@@ -35,7 +44,7 @@ export class ApiKeyService {
   ): Promise<CreatedApiKey> {
     const expiresAt = new Date(input.expiresAt);
 
-    if (expiresAt <= now) {
+    if (expiresAt <= now || expiresAt > getMaxApiKeyExpiration(now)) {
       throw apiKeyErrors.invalidApiKeyExpiration();
     }
 
@@ -95,7 +104,13 @@ export class ApiKeyService {
       return;
     }
 
-    await this.repository.updateLastUsedAt(apiKey.id, now);
+    const shouldUpdateLastUsedAt =
+      !apiKey.lastUsedAt ||
+      now.getTime() - apiKey.lastUsedAt.getTime() >= lastUsedAtUpdateIntervalMs;
+
+    if (shouldUpdateLastUsedAt) {
+      await this.repository.updateLastUsedAt(apiKey.id, now);
+    }
 
     return apiKey.ownerUserId;
   }

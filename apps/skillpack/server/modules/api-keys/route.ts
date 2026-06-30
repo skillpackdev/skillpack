@@ -13,9 +13,7 @@ import {
 } from "./presenter";
 
 const apiKeyErrorStatus = {
-  "api-key-expired": 401,
   "api-key-not-found": 404,
-  "api-key-revoked": 401,
   "invalid-api-key-expiration": 400,
 } as const;
 

@@ -15,6 +15,13 @@
       "when": 1779892666256,
       "tag": "0001_better_auth_oauth_provider",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1782799977385,
+      "tag": "0002_silky_lizard",
+      "breakpoints": true
     }
   ]
 }

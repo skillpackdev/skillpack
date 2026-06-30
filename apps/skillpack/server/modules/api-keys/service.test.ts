@@ -39,7 +39,7 @@ describe("API key service", () => {
     const d1 = (await mf.getD1Database("DB")) as unknown as D1Database;
     await applyMigration(
       d1,
-      join(process.cwd(), "migrations/0003_api_keys.sql")
+      join(process.cwd(), "migrations/0002_silky_lizard.sql")
     );
 
     db = createDb(d1);
@@ -69,6 +69,19 @@ describe("API key service", () => {
     expect(rows[0]?.keyHint).toBe(created.apiKey.keyHint);
   });
 
+  it("rejects keys with expiration beyond the maximum lifetime", async () => {
+    await expect(
+      service.createApiKey(
+        "user-a",
+        {
+          expiresAt: "2027-06-30T10:00:01.000Z",
+          name: "Long-lived client",
+        },
+        new Date("2026-06-29T10:00:00.000Z")
+      )
+    ).rejects.toThrow("API key expiration must be within one year");
+  });
+
   it("verifies active keys and updates last used time", async () => {
     const created = await service.createApiKey(
       "user-a",
@@ -90,6 +103,55 @@ describe("API key service", () => {
 
     expect(userId).toBe("user-a");
     expect(row?.lastUsedAt?.toISOString()).toBe("2026-06-29T10:05:00.000Z");
+  });
+
+  it("throttles last used time updates", async () => {
+    const created = await service.createApiKey(
+      "user-a",
+      {
+        expiresAt: "2026-12-29T10:00:00.000Z",
+        name: "Claude Desktop",
+      },
+      new Date("2026-06-29T10:00:00.000Z")
+    );
+
+    await service.verifyApiKeySecret(
+      created.secret,
+      new Date("2026-06-29T10:05:00.000Z")
+    );
+    await service.verifyApiKeySecret(
+      created.secret,
+      new Date("2026-06-29T10:30:00.000Z")
+    );
+    const [rowBeforeThreshold] = await db
+      .select()
+      .from(apiKeysTable)
+      .where(eq(apiKeysTable.id, created.apiKey.id));
+
+    await service.verifyApiKeySecret(
+      created.secret,
+      new Date("2026-06-29T11:05:00.000Z")
+    );
+    const [rowAfterThreshold] = await db
+      .select()
+      .from(apiKeysTable)
+      .where(eq(apiKeysTable.id, created.apiKey.id));
+
+    expect(rowBeforeThreshold?.lastUsedAt?.toISOString()).toBe(
+      "2026-06-29T10:05:00.000Z"
+    );
+    expect(rowAfterThreshold?.lastUsedAt?.toISOString()).toBe(
+      "2026-06-29T11:05:00.000Z"
+    );
+  });
+
+  it("rejects malformed API key secrets before lookup", async () => {
+    await expect(
+      service.verifyApiKeySecret(
+        "skp_invalid",
+        new Date("2026-06-29T10:00:00.000Z")
+      )
+    ).resolves.toBeUndefined();
   });
 
   it("rejects expired and revoked keys", async () => {
