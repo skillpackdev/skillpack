@@ -185,7 +185,9 @@ export const ApiKeysPanel = ({ apiKeys }: ApiKeysPanelProps) => {
                       {apiKey.keyHint}
                     </code>
                   </TableCell>
-                  <TableCell>{formatApiKeyDate(apiKey.createdAt)}</TableCell>
+                  <TableCell>
+                    {formatApiKeyExpirationDate(apiKey.createdAt)}
+                  </TableCell>
                   <TableCell>
                     {formatApiKeyExpirationDate(apiKey.expiresAt)}
                   </TableCell>
