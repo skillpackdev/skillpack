@@ -55,6 +55,14 @@ pnpm db:migrate:remote
 pnpm db:seed:local
 ```
 
+When generating Drizzle migrations, always pass a semantic migration name through the CLI instead of accepting Drizzle's random name:
+
+```bash
+pnpm --filter @skillpack/app db:generate -- --name api_keys
+```
+
+Use a concise snake_case name that describes the schema change. Do not hand-rename generated migration files after the fact unless repairing an existing migration; the CLI should create the SQL file and `migrations/meta/*` snapshot/journal together.
+
 Cloudflare resource setup:
 
 ```bash
