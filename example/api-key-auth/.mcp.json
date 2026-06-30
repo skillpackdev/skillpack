@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "skillpack-by-key": {
+      "url": "http://localhost:5173/mcp",
+      "auth": "bearer",
+      "bearerTokenEnv": "SKILLPACK_API_KEY",
+      "directTools": true,
+      "exposeResources": false
+    }
+  }
+}

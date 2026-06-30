@@ -151,7 +151,7 @@ export const ApiKeysPanel = ({ apiKeys }: ApiKeysPanelProps) => {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead>Hint</TableHead>
+              <TableHead>Key</TableHead>
               <TableHead>Created</TableHead>
               <TableHead>Expires</TableHead>
               <TableHead>Last used</TableHead>
