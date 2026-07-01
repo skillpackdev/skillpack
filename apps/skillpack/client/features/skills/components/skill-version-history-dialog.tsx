@@ -55,6 +55,14 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemGroup,
+  ItemTitle,
+} from "@/components/ui/item";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
@@ -213,65 +221,65 @@ const VersionListItem = ({
   const removeDisabled = pending || !version.label;
 
   return (
-    <div
+    <Item
+      render={<li />}
+      size="sm"
+      variant={selected ? "outline" : "default"}
       className={cn(
-        "mx-3 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 rounded-3xl border border-transparent p-3 text-sm",
-        selected
-          ? "border-border bg-background shadow-sm"
-          : "hover:bg-background/70"
+        "mx-3 flex-nowrap rounded-3xl",
+        selected ? "bg-background shadow-sm" : "hover:bg-background/70"
       )}
     >
-      <button
-        type="button"
-        className="min-w-0 text-left"
-        onClick={() => onSelect(version.id)}
-      >
-        <span className="flex min-w-0 items-center gap-2">
-          <span className="truncate font-medium text-foreground">
-            {version.label ?? createdAtLabel}
-          </span>
-          {current ? <Badge variant="secondary">Current</Badge> : null}
-        </span>
-        {version.label ? (
-          <time
-            className="mt-1 block text-xs text-muted-foreground"
-            dateTime={version.createdAt}
-          >
-            {createdAtLabel}
-          </time>
-        ) : null}
-      </button>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              aria-label={`Actions for ${version.label ?? createdAtLabel}`}
-            />
-          }
+      <ItemContent className="min-w-0">
+        <button
+          type="button"
+          className="min-w-0 text-left"
+          onClick={() => onSelect(version.id)}
         >
-          <MoreVerticalIcon data-icon="inline-start" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="!w-56">
-          <DropdownMenuGroup>
-            <DropdownMenuItem onClick={() => onRename(version)}>
-              <PencilIcon data-icon="inline-start" />
-              Rename version
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              disabled={removeDisabled}
-              variant="destructive"
-              onClick={() => onRemove(version)}
-            >
-              <Trash2Icon data-icon="inline-start" />
-              Remove this version
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
+          <ItemTitle className="max-w-full">
+            <span className="truncate">{version.label ?? createdAtLabel}</span>
+            {current ? <Badge variant="secondary">Current</Badge> : null}
+          </ItemTitle>
+          {version.label ? (
+            <ItemDescription>
+              <time dateTime={version.createdAt}>{createdAtLabel}</time>
+            </ItemDescription>
+          ) : null}
+        </button>
+      </ItemContent>
+      <ItemActions className="self-start">
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                aria-label={`Actions for ${version.label ?? createdAtLabel}`}
+              />
+            }
+          >
+            <MoreVerticalIcon data-icon="inline-start" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="!w-56">
+            <DropdownMenuGroup>
+              <DropdownMenuItem onClick={() => onRename(version)}>
+                <PencilIcon data-icon="inline-start" />
+                Rename version
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={removeDisabled}
+                variant="destructive"
+                onClick={() => onRemove(version)}
+              >
+                <Trash2Icon data-icon="inline-start" />
+                Remove this version
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </ItemActions>
+    </Item>
   );
 };
 
@@ -607,20 +615,22 @@ export const SkillVersionHistoryDialog = ({
                 className="min-h-0 flex-1 py-3"
               >
                 {versions.length ? (
-                  versions.map((version) => (
-                    <VersionListItem
-                      key={version.id}
-                      current={version.id === currentVersionId}
-                      pending={mutationPending}
-                      selected={version.id === selectedVersionId}
-                      version={version}
-                      onRemove={(nextVersion) => {
-                        void removeVersionLabel(nextVersion);
-                      }}
-                      onRename={setRenameVersion}
-                      onSelect={setSelectedVersionId}
-                    />
-                  ))
+                  <ItemGroup className="gap-1">
+                    {versions.map((version) => (
+                      <VersionListItem
+                        key={version.id}
+                        current={version.id === currentVersionId}
+                        pending={mutationPending}
+                        selected={version.id === selectedVersionId}
+                        version={version}
+                        onRemove={(nextVersion) => {
+                          void removeVersionLabel(nextVersion);
+                        }}
+                        onRename={setRenameVersion}
+                        onSelect={setSelectedVersionId}
+                      />
+                    ))}
+                  </ItemGroup>
                 ) : (
                   <VersionHistoryEmptyState status={historyStatus} />
                 )}
