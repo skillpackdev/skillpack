@@ -1,16 +1,10 @@
-export {
-  useSkillDetail,
-  useSkillFile,
-  useSkillSnapshots,
-} from "./api/use-skill-detail";
+export { useSkillDetail, useSkillFile } from "./api/use-skill-detail";
 export { useOriginDiscovery } from "./api/use-origin-discovery";
 export { useOriginSkillDefinition } from "./api/use-origin-skill-definition";
 export {
   useCreateSkill,
   useForkSkill,
   usePatchSkill,
-  useCreateSkillSnapshot,
-  useRestoreSkillSnapshot,
 } from "./api/use-skill-mutations";
 export { useSkillList } from "./api/use-skill-list";
 export { ForkOriginDialog } from "./components/fork-origin-dialog";

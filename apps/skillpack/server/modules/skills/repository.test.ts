@@ -2,7 +2,10 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { createDb } from "@server/db/client";
-import { skillResourcesTable } from "@server/db/schema";
+import {
+  skillVersionResourcesTable,
+  skillVersionsTable,
+} from "@server/db/schema";
 import { eq } from "drizzle-orm";
 import { Miniflare } from "miniflare";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -76,10 +79,14 @@ describe("skill repository persistence", () => {
     });
 
     const d1 = (await mf.getD1Database("DB")) as unknown as D1Database;
-    await applyMigration(
-      d1,
-      join(process.cwd(), "migrations/0000_initial.sql")
-    );
+    for (const migration of [
+      "0000_initial.sql",
+      "0001_better_auth_oauth_provider.sql",
+      "0002_api_keys.sql",
+      "0003_skill_version_dag.sql",
+    ]) {
+      await applyMigration(d1, join(process.cwd(), "migrations", migration));
+    }
 
     db = createDb(d1);
     repository = new SkillRepository(db, "user-a");
@@ -117,7 +124,7 @@ describe("skill repository persistence", () => {
     ).toStrictEqual([skill.id, skill.id]);
   });
 
-  it("updates current Skill state without creating a snapshot", async () => {
+  it("updates current Skill state by appending a version DAG node", async () => {
     const skill = await createSkill(repository);
 
     const updatedSkill = await repository.updateSkillState(
@@ -130,55 +137,38 @@ describe("skill repository persistence", () => {
       },
       new Date("2026-05-25T12:01:00.000Z")
     );
+    const versions = await db
+      .select()
+      .from(skillVersionsTable)
+      .where(eq(skillVersionsTable.skillId, skill.id));
     const currentResources = await db
       .select()
-      .from(skillResourcesTable)
-      .where(eq(skillResourcesTable.skillId, skill.id));
+      .from(skillVersionResourcesTable)
+      .where(
+        eq(
+          skillVersionResourcesTable.versionId,
+          updatedSkill.headVersionId ?? 0
+        )
+      );
+    const historicalResources = await db
+      .select()
+      .from(skillVersionResourcesTable)
+      .where(
+        eq(skillVersionResourcesTable.versionId, skill.headVersionId ?? 0)
+      );
 
     expect(updatedSkill).toMatchObject({
       description: "Second state",
       name: "demo-next",
     });
+    expect(versions).toHaveLength(2);
+    expect(versions[1]?.parentId).toBe(skill.headVersionId);
     expect(
       new Set(currentResources.map((resource) => resource.sha256))
     ).toStrictEqual(new Set(["skill-v2", "notes-v2"]));
-    await expect(repository.listSkillSnapshots(skill.id)).resolves.toHaveLength(
-      0
-    );
-  });
-
-  it("creates whole-state snapshots with incrementing snapshot numbers", async () => {
-    const skill = await createSkill(repository);
-    const currentResources = await repository.listResourcesBySkillId(skill.id);
-
-    const firstSnapshot = await repository.createSkillSnapshot(
-      {
-        label: "before edit",
-        resources: currentResources,
-        skill,
-        skillId: skill.id,
-      },
-      new Date("2026-05-25T12:02:00.000Z")
-    );
-    const secondSnapshot = await repository.createSkillSnapshot(
-      {
-        note: "checkpoint",
-        resources: currentResources,
-        skill,
-        skillId: skill.id,
-      },
-      new Date("2026-05-25T12:03:00.000Z")
-    );
-
-    expect(firstSnapshot.snapshotNumber).toBe(1);
-    expect(secondSnapshot.snapshotNumber).toBe(2);
-    expect(firstSnapshot.stateJson).toMatchObject({
-      description: "First state",
-      name: "demo",
-      resources: expect.arrayContaining([
-        expect.objectContaining({ path: "SKILL.md", sha256: "skill-demo" }),
-      ]),
-    });
+    expect(
+      new Set(historicalResources.map((resource) => resource.sha256))
+    ).toStrictEqual(new Set(["skill-demo", "notes-demo"]));
   });
 
   it("stores nullable origin JSON on current Skill state", async () => {

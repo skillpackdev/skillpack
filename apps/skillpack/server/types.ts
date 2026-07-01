@@ -11,7 +11,7 @@ export interface AppBindings {
   Bindings: Env;
   Variables: {
     apiKeyService: ApiKeyService;
-    currentUser: { id: string };
+    currentUser: { canWrite?: boolean; id: string };
     db: Database;
     originService: OriginService;
     skillRepository: SkillRepository;

@@ -21,18 +21,24 @@ allowed-tools: Read
 # Demo
 `;
 
-const skillRow = (input?: Partial<SkillRow>): SkillRow => ({
-  allowedTools: input?.allowedTools ?? "Read",
-  compatibility: input?.compatibility ?? null,
+const defaultSkillRow: SkillRow = {
+  allowedTools: "Read",
+  compatibility: null,
   createdAt,
-  description: input?.description ?? "Demo description",
-  id: input?.id ?? 1,
-  license: input?.license ?? "Apache-2.0",
-  metadata: input?.metadata ?? { author: "acme" },
-  name: input?.name ?? "demo",
-  origin: input?.origin ?? null,
-  ownerUserId: input?.ownerUserId ?? "user-a",
+  description: "Demo description",
+  headVersionId: 10,
+  id: 1,
+  license: "Apache-2.0",
+  metadata: { author: "acme" },
+  name: "demo",
+  origin: null,
+  ownerUserId: "user-a",
   updatedAt,
+};
+
+const skillRow = (input?: Partial<SkillRow>): SkillRow => ({
+  ...defaultSkillRow,
+  ...input,
 });
 
 const resourceRow = (input?: Partial<SkillResourceRow>): SkillResourceRow => ({
@@ -43,6 +49,7 @@ const resourceRow = (input?: Partial<SkillResourceRow>): SkillResourceRow => ({
   sha256: input?.sha256 ?? "skill-md",
   size: input?.size ?? 120,
   skillId: input?.skillId ?? 1,
+  versionId: input?.versionId ?? 10,
 });
 
 const storedResource = (
@@ -88,15 +95,11 @@ const originDefinition = (input?: {
 const createService = () => {
   const repository = {
     createSkill: vi.fn<SkillRepository["createSkill"]>(),
-    createSkillSnapshot: vi.fn<SkillRepository["createSkillSnapshot"]>(),
     deleteSkillById: vi.fn<SkillRepository["deleteSkillById"]>(),
     findResourceByPath: vi.fn<SkillRepository["findResourceByPath"]>(),
     findSkillById: vi.fn<SkillRepository["findSkillById"]>(),
     findSkillByName: vi.fn<SkillRepository["findSkillByName"]>(),
-    findSkillSnapshotByNumber:
-      vi.fn<SkillRepository["findSkillSnapshotByNumber"]>(),
     listResourcesBySkillId: vi.fn<SkillRepository["listResourcesBySkillId"]>(),
-    listSkillSnapshots: vi.fn<SkillRepository["listSkillSnapshots"]>(),
     updateSkillState: vi.fn<SkillRepository["updateSkillState"]>(),
   };
   const resourceManifest = {
@@ -283,48 +286,7 @@ describe("SkillService current-state lifecycle", () => {
     expect(resourceManifest.storeSkillFile).not.toHaveBeenCalled();
   });
 
-  it("restores a snapshot by replacing current state and preserving conflict checks", async () => {
-    const { repository, service } = createService();
-    const currentSkill = skillRow({ id: 1, name: "demo" });
-
-    repository.findSkillByName.mockResolvedValueOnce(currentSkill);
-    repository.findSkillSnapshotByNumber.mockResolvedValue({
-      createdAt,
-      id: 8,
-      label: "previous",
-      note: null,
-      skillId: currentSkill.id,
-      snapshotNumber: 1,
-      stateJson: {
-        allowedTools: "Read",
-        compatibility: null,
-        description: "Old description",
-        license: null,
-        metadata: null,
-        name: "demo-old",
-        origin: null,
-        resources: [storedResource({ path: "SKILL.md", sha256: "old" })],
-      },
-      stateVersion: 1,
-    });
-    repository.findSkillByName.mockResolvedValueOnce(missingSkill);
-    repository.updateSkillState.mockResolvedValue(
-      skillRow({ name: "demo-old" })
-    );
-
-    await service.restoreSkillSnapshotByName("demo", 1);
-
-    expect(repository.updateSkillState).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: "demo-old",
-        resources: [expect.objectContaining({ sha256: "old" })],
-        skillId: currentSkill.id,
-      }),
-      expect.any(Date)
-    );
-  });
-
-  it("adds a source skill with an existing name by snapshotting before update", async () => {
+  it("adds a source skill with an existing name by appending a new version", async () => {
     const { originService, repository, resourceManifest, service } =
       createService();
     const existingSkill = skillRow({ id: 7, name: "demo" });
@@ -334,25 +296,6 @@ describe("SkillService current-state lifecycle", () => {
     ]);
     repository.findSkillByName.mockResolvedValue(existingSkill);
     repository.listResourcesBySkillId.mockResolvedValue([resourceRow()]);
-    repository.createSkillSnapshot.mockResolvedValue({
-      createdAt,
-      id: 1,
-      label: "before update",
-      note: null,
-      skillId: existingSkill.id,
-      snapshotNumber: 1,
-      stateJson: {
-        allowedTools: "Read",
-        compatibility: null,
-        description: "Demo description",
-        license: null,
-        metadata: null,
-        name: "demo",
-        origin: null,
-        resources: [],
-      },
-      stateVersion: 1,
-    });
     resourceManifest.storeSkillFile.mockResolvedValue(
       storedResource({ path: "SKILL.md" })
     );
@@ -366,17 +309,9 @@ describe("SkillService current-state lifecycle", () => {
     const result = await service.forkSkill({
       origin: { kind: "github", repoUrl: "https://github.com/example/skills" },
       selections: [{ skillName: "demo" }],
-      snapshotLabel: "before update",
     });
 
     expect(result.results[0]).toMatchObject({ status: "forked" });
-    expect(repository.createSkillSnapshot).toHaveBeenCalledWith(
-      expect.objectContaining({
-        label: "before update",
-        skillId: existingSkill.id,
-      }),
-      expect.any(Date)
-    );
     expect(repository.updateSkillState).toHaveBeenCalledWith(
       expect.objectContaining({ skillId: existingSkill.id }),
       expect.any(Date)

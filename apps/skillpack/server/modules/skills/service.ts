@@ -9,7 +9,6 @@ import type { SkillRepository } from "./repository";
 import { ResourceManifest } from "./resource-manifest";
 import type {
   CreateSkillServiceInput,
-  CreateSkillSnapshotServiceInput,
   ForkSkillServiceInput,
   ForkSkillServiceResult,
   PatchSkillResult,
@@ -19,10 +18,8 @@ import type {
   ReadSkillFileResult,
   ReadSkillTextFileResult,
   ResolvedSkillResult,
-  RestoreSkillSnapshotResult,
   SkillResourceRow,
   SkillRow,
-  StoredResourceObject,
 } from "./types";
 
 const getSkillFileMetadata = (skill: SkillRow): SkillFileMetadata => ({
@@ -64,15 +61,6 @@ const skillFileMetadataEquals = (
   metadataEquals(left.metadata, right.metadata) &&
   left.name === right.name;
 
-const toResourceObjects = (
-  resources: {
-    mediaType: string;
-    path: string;
-    sha256: string;
-    size: number;
-  }[]
-): StoredResourceObject[] => resources.map((resource) => ({ ...resource }));
-
 export class SkillService {
   private readonly repository: SkillRepository;
 
@@ -92,17 +80,6 @@ export class SkillService {
 
   listSkills() {
     return this.repository.listSkills();
-  }
-
-  async listSkillSnapshotsForSkillName(name: string) {
-    const skill = await this.repository.findSkillByName(name);
-
-    if (!skill) {
-      throw skillErrors.skillNotFound();
-    }
-
-    const snapshots = await this.repository.listSkillSnapshots(skill.id);
-    return { skill, snapshots };
   }
 
   async resolveSkill(skillId: number): Promise<ResolvedSkillResult> {
@@ -320,68 +297,6 @@ export class SkillService {
     };
   }
 
-  async createSkillSnapshotByName(
-    name: string,
-    input: CreateSkillSnapshotServiceInput
-  ) {
-    const skill = await this.repository.findSkillByName(name);
-
-    if (!skill) {
-      throw skillErrors.skillNotFound();
-    }
-
-    return await this.createSnapshotForSkill(skill, input);
-  }
-
-  async restoreSkillSnapshotByName(
-    name: string,
-    snapshotNumber: number
-  ): Promise<RestoreSkillSnapshotResult> {
-    const skill = await this.repository.findSkillByName(name);
-
-    if (!skill) {
-      throw skillErrors.skillNotFound();
-    }
-
-    const snapshot = await this.repository.findSkillSnapshotByNumber(
-      skill.id,
-      snapshotNumber
-    );
-
-    if (!snapshot) {
-      throw skillErrors.skillSnapshotNotFound();
-    }
-
-    const state = snapshot.stateJson;
-    const conflictingSkill = await this.repository.findSkillByName(state.name);
-
-    if (conflictingSkill && conflictingSkill.id !== skill.id) {
-      throw skillErrors.duplicateSkillName();
-    }
-
-    await this.repository.updateSkillState(
-      {
-        name: state.name,
-        origin: state.origin,
-        resources: toResourceObjects(state.resources),
-        skillFileMetadata: {
-          allowedTools: state.allowedTools,
-          compatibility: state.compatibility,
-          description: state.description,
-          license: state.license,
-          metadata: state.metadata,
-        },
-        skillId: skill.id,
-      },
-      new Date()
-    );
-
-    return {
-      name: state.name,
-      restoredFromSnapshot: snapshotNumber,
-    };
-  }
-
   async deleteSkill(skillId: number) {
     const skill = await this.repository.findSkillById(skillId);
 
@@ -432,10 +347,7 @@ export class SkillService {
       try {
         results.push({
           selection: definitionResult.definition.selection,
-          skill: await this.forkSkillDefinition(
-            definitionResult.definition,
-            input.snapshotLabel
-          ),
+          skill: await this.forkSkillDefinition(definitionResult.definition),
           status: "forked",
         });
       } catch (error) {
@@ -450,10 +362,7 @@ export class SkillService {
     return { results };
   }
 
-  private async forkSkillDefinition(
-    definition: OriginSkillDefinition,
-    snapshotLabel: string | undefined
-  ) {
+  private async forkSkillDefinition(definition: OriginSkillDefinition) {
     const now = new Date();
     const existingSkill = await this.repository.findSkillByName(
       definition.name
@@ -472,13 +381,6 @@ export class SkillService {
     };
 
     if (existingSkill) {
-      const currentResources = await this.repository.listResourcesBySkillId(
-        existingSkill.id
-      );
-      await this.createSnapshotForSkill(existingSkill, {
-        label: snapshotLabel,
-        note: "Pre-update snapshot created by Add to Library.",
-      });
       await this.repository.updateSkillState(
         {
           name: definition.name,
@@ -489,7 +391,6 @@ export class SkillService {
         },
         now
       );
-      void currentResources;
 
       return this.resolveSkill(existingSkill.id);
     }
@@ -505,23 +406,6 @@ export class SkillService {
     );
 
     return this.resolveSkill(skill.id);
-  }
-
-  private async createSnapshotForSkill(
-    skill: SkillRow,
-    input: CreateSkillSnapshotServiceInput
-  ) {
-    const resources = await this.repository.listResourcesBySkillId(skill.id);
-    return await this.repository.createSkillSnapshot(
-      {
-        label: input.label,
-        note: input.note,
-        resources,
-        skill,
-        skillId: skill.id,
-      },
-      new Date()
-    );
   }
 
   private async readCurrentSkillFile(

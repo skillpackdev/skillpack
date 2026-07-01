@@ -6,7 +6,6 @@ import {
   skillLicenseSchema,
   skillMetadataSchema,
   skillNameSchema,
-  skillSnapshotNumberSchema,
 } from "@skillpack/core/primitives";
 import { z } from "zod";
 
@@ -55,19 +54,6 @@ export const resolvedSkillSchema = z.object({
   updatedAt: z.string().datetime(),
 });
 
-export const skillSnapshotItemSchema = z.object({
-  createdAt: z.string().datetime(),
-  label: z.string().nullable(),
-  name: skillNameSchema,
-  note: z.string().nullable(),
-  snapshotNumber: skillSnapshotNumberSchema,
-});
-
-export const skillSnapshotListResponseSchema = z.object({
-  name: skillNameSchema,
-  snapshots: z.array(skillSnapshotItemSchema),
-});
-
 export const skillResourceResponseSchema = z.object({
   content: z.string(),
   mediaType: z.string().min(1),
@@ -83,11 +69,6 @@ export const skillPatchedResponseSchema = z.object({
   license: skillLicenseSchema.nullable(),
   metadata: skillMetadataSchema.nullable(),
   name: skillNameSchema,
-});
-
-export const restoreSnapshotResponseSchema = z.object({
-  name: skillNameSchema,
-  restoredFromSnapshot: skillSnapshotNumberSchema,
 });
 
 export const forkSkillResultSchema = z.discriminatedUnion("status", [
@@ -114,7 +95,3 @@ export type SkillListItem = z.infer<typeof skillListItemSchema>;
 export type SkillListResponse = z.infer<typeof skillListResponseSchema>;
 export type SkillPatchedResponse = z.infer<typeof skillPatchedResponseSchema>;
 export type SkillResourceResponse = z.infer<typeof skillResourceResponseSchema>;
-export type SkillSnapshotItem = z.infer<typeof skillSnapshotItemSchema>;
-export type SkillSnapshotListResponse = z.infer<
-  typeof skillSnapshotListResponseSchema
->;

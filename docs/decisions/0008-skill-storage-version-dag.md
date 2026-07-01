@@ -40,7 +40,7 @@ The current storage model works against a safe write path:
   `owner_user_id`) and content (`description`, `license`, `compatibility`,
   `allowed_tools`, `metadata`, `origin`).
 - `skill_resources` is the live manifest (`skill_id → path → sha256 → size →
-  media_type`); a write **destructively replaces** the manifest mapping. R2
+media_type`); a write **destructively replaces** the manifest mapping. R2
   blobs are content-addressed and never deleted, but the mapping to them is
   overwritten in place.
 - `skill_snapshots` is a parallel, manually-triggered backup mechanism
@@ -201,8 +201,8 @@ scans history and never joins through refs.
 - **Known debt (tracked, not forgotten):** retention is the model's **only**
   growth bound. With the GC mechanism deferred, v1 storage is temporarily
   unbounded. This is acceptable at the current early stage with few users, but
-  is recorded here as tracked debt: *retention window = 30 days (decided),
-  enforcement = deferred.*
+  is recorded here as tracked debt: _retention window = 30 days (decided),
+  enforcement = deferred._
 
 ### 7. Pivot: remove the old snapshot mechanism
 

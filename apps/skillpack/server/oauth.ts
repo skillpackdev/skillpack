@@ -1,7 +1,7 @@
 import { oauthProviderResourceClient } from "@better-auth/oauth-provider/resource-client";
 import { verifyJwsAccessToken } from "better-auth/oauth2";
 
-import { createAuth, skillReadScope } from "./auth";
+import { createAuth, skillReadScope, skillWriteScope } from "./auth";
 import { getMcpOAuthResource, getOAuthResource } from "./oauth-audience";
 
 export { getMcpOAuthResource, getOAuthResource } from "./oauth-audience";
@@ -22,17 +22,23 @@ const getBearerToken = (headers: Headers) => {
 export const mcpProtectedResourceScopes = [
   "offline_access",
   skillReadScope,
+  skillWriteScope,
 ] as const;
 
 const hasScope = (scope: unknown, requiredScope: string) =>
   typeof scope === "string" && scope.split(" ").includes(requiredScope);
 
-const getBearerUserId = async (
+export interface SkillBearerAccess {
+  canWrite: boolean;
+  userId: string;
+}
+
+const getBearerAccess = async (
   env: Env,
   origin: string,
   headers: Headers,
   expectedResource: string
-) => {
+): Promise<SkillBearerAccess | undefined> => {
   const token = getBearerToken(headers);
 
   if (!token) {
@@ -57,20 +63,41 @@ const getBearerUserId = async (
     return;
   }
 
-  return payload.sub;
+  return {
+    canWrite: hasScope(payload.scope, skillWriteScope),
+    userId: payload.sub,
+  };
 };
 
-export const getSkillReadBearerUserId = (
+export const getSkillReadBearerAccess = (
   env: Env,
   origin: string,
   headers: Headers
-) => getBearerUserId(env, origin, headers, getOAuthResource(env, origin));
+) => getBearerAccess(env, origin, headers, getOAuthResource(env, origin));
 
-export const getMcpSkillReadBearerUserId = (
+export const getMcpSkillReadBearerAccess = (
   env: Env,
   origin: string,
   headers: Headers
-) => getBearerUserId(env, origin, headers, getMcpOAuthResource(env, origin));
+) => getBearerAccess(env, origin, headers, getMcpOAuthResource(env, origin));
+
+export const getSkillReadBearerUserId = async (
+  env: Env,
+  origin: string,
+  headers: Headers
+) => {
+  const access = await getSkillReadBearerAccess(env, origin, headers);
+  return access?.userId;
+};
+
+export const getMcpSkillReadBearerUserId = async (
+  env: Env,
+  origin: string,
+  headers: Headers
+) => {
+  const access = await getMcpSkillReadBearerAccess(env, origin, headers);
+  return access?.userId;
+};
 
 const getResourceMetadata = async (resource: string, resourceName: string) => {
   const resourceClient = oauthProviderResourceClient();
@@ -83,10 +110,10 @@ const getResourceMetadata = async (resource: string, resourceName: string) => {
       jwks_uri: `${authorizationServer}/api/auth/jwks`,
       resource,
       resource_name: resourceName,
-      scopes_supported: [skillReadScope],
+      scopes_supported: [skillReadScope, skillWriteScope],
     },
     {
-      externalScopes: [skillReadScope],
+      externalScopes: [skillReadScope, skillWriteScope],
       silenceWarnings: { oidcScopes: true },
     }
   );

@@ -42,6 +42,7 @@ const resolvedSkill = (): ResolvedSkillResult => {
       compatibility: null,
       createdAt,
       description: "Demo description",
+      headVersionId: 10,
       id: 42,
       license: null,
       metadata: null,
@@ -103,7 +104,7 @@ describe("app OAuth bearer skills read auth", () => {
       bearer_methods_supported: ["header"],
       resource: "http://localhost",
       resource_name: "Skillpack Managed Skills",
-      scopes_supported: ["skills:read"],
+      scopes_supported: ["skills:read", "skills:write"],
     });
   });
 
@@ -262,7 +263,7 @@ describe("app MCP auth", () => {
       bearer_methods_supported: ["header"],
       resource: "http://localhost/mcp",
       resource_name: "Skillpack MCP Server",
-      scopes_supported: ["offline_access", "skills:read"],
+      scopes_supported: ["offline_access", "skills:read", "skills:write"],
     });
   });
 
@@ -284,7 +285,7 @@ describe("app MCP auth", () => {
 
     expect(response.status).toBe(401);
     expect(response.headers.get("www-authenticate")).toBe(
-      'Bearer realm="mcp", resource_metadata="http://localhost/.well-known/oauth-protected-resource/mcp", scope="openid offline_access skills:read"'
+      'Bearer realm="mcp", resource_metadata="http://localhost/.well-known/oauth-protected-resource/mcp", scope="openid offline_access skills:read skills:write"'
     );
     await expect(response.json()).resolves.toStrictEqual({
       error: "Unauthorized",
@@ -562,16 +563,33 @@ describe("app MCP auth", () => {
     );
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toMatchObject({
+    const body = (await response.json()) as {
+      result: {
+        tools: {
+          inputSchema: { properties: Record<string, unknown> };
+          name: string;
+        }[];
+      };
+    };
+    const updateSkillTool = body.result.tools.find(
+      (tool) => tool.name === "update_skill"
+    );
+
+    expect(body).toMatchObject({
       id: 2,
       jsonrpc: "2.0",
       result: {
         tools: [
           expect.objectContaining({ name: "list_skills" }),
+          expect.objectContaining({ name: "create_skill" }),
+          expect.objectContaining({ name: "update_skill" }),
           expect.objectContaining({ name: "read_skill" }),
         ],
       },
     });
+    expect(updateSkillTool?.inputSchema.properties).not.toHaveProperty(
+      "content"
+    );
   });
 
   it("returns the authenticated Skillpack catalog from list_skills", async () => {
@@ -583,6 +601,7 @@ describe("app MCP auth", () => {
           compatibility: null,
           createdAt,
           description: "Demo skill",
+          headVersionId: 10,
           id: 42,
           license: null,
           metadata: null,
@@ -659,6 +678,7 @@ describe("app MCP auth", () => {
             sha256: "skill-md",
             size: 48,
             skillId: 42,
+            versionId: 10,
           },
           {
             createdAt,
@@ -668,6 +688,7 @@ describe("app MCP auth", () => {
             sha256: "abc123",
             size: 12,
             skillId: 42,
+            versionId: 10,
           },
         ],
         skill: {
@@ -675,6 +696,7 @@ describe("app MCP auth", () => {
           compatibility: null,
           createdAt,
           description: "Demo skill",
+          headVersionId: 10,
           id: 42,
           license: null,
           metadata: null,
@@ -862,6 +884,7 @@ describe("app MCP auth", () => {
           compatibility: null,
           createdAt,
           description: "Demo skill",
+          headVersionId: 10,
           id: 42,
           license: null,
           metadata: null,
@@ -885,6 +908,7 @@ describe("app MCP auth", () => {
             sha256: "skill-md",
             size: 48,
             skillId: 42,
+            versionId: 10,
           },
           {
             createdAt,
@@ -894,6 +918,7 @@ describe("app MCP auth", () => {
             sha256: "abc123",
             size: 12,
             skillId: 42,
+            versionId: 10,
           },
         ],
       });
@@ -1080,6 +1105,7 @@ describe("app MCP auth", () => {
           compatibility: null,
           createdAt,
           description: "Demo skill",
+          headVersionId: 10,
           id: 42,
           license: null,
           metadata: null,

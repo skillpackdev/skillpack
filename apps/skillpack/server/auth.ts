@@ -5,10 +5,12 @@ import { genericOAuth, jwt } from "better-auth/plugins";
 import { getMcpOAuthResource } from "./oauth-audience";
 
 export const skillReadScope = "skills:read";
+export const skillWriteScope = "skills:write";
 export const skillpackOAuthScopes = [
   "openid",
   "offline_access",
   skillReadScope,
+  skillWriteScope,
 ];
 
 const providerId = "oidc";

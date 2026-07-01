@@ -11,18 +11,10 @@ import {
   skillDetailQueryKey,
   skillFileQueryPrefix,
   skillListQueryKey,
-  skillSnapshotsQueryKey,
 } from "@/features/skills/api/query-keys";
 import { activeSkillQueryOptions } from "@/features/skills/api/query-options";
-import {
-  useSkillDetail,
-  useSkillSnapshots,
-} from "@/features/skills/api/use-skill-detail";
-import {
-  useCreateSkillSnapshot,
-  usePatchSkill,
-  useRestoreSkillSnapshot,
-} from "@/features/skills/api/use-skill-mutations";
+import { useSkillDetail } from "@/features/skills/api/use-skill-detail";
+import { usePatchSkill } from "@/features/skills/api/use-skill-mutations";
 import { SkillDetailSkeleton } from "@/features/skills/components/skill-page-skeletons";
 import { skillFilePath } from "@/features/skills/lib/resource-drafts";
 import { SkillDetailView } from "@/features/skills/views/skill-detail-view";
@@ -48,9 +40,6 @@ const cancelSkillQueries = async (
   await queryClient.cancelQueries({
     queryKey: skillFileQueryPrefix(skillName),
   });
-  await queryClient.cancelQueries({
-    queryKey: skillSnapshotsQueryKey(skillName),
-  });
 };
 
 const invalidateSkillQueries = async (
@@ -64,30 +53,6 @@ const invalidateSkillQueries = async (
   await queryClient.invalidateQueries({
     queryKey: skillFileQueryPrefix(skillName),
   });
-  await queryClient.invalidateQueries({
-    queryKey: skillSnapshotsQueryKey(skillName),
-  });
-};
-
-const removeSkillQueries = (
-  queryClient: ReturnType<typeof useQueryClient>,
-  skillName: string
-) => {
-  queryClient.removeQueries({ queryKey: skillDetailQueryKey(skillName) });
-  queryClient.removeQueries({ queryKey: skillFileQueryPrefix(skillName) });
-  queryClient.removeQueries({ queryKey: skillSnapshotsQueryKey(skillName) });
-};
-
-const getSnapshotsStatus = (snapshotCount: number, isPending: boolean) => {
-  if (isPending) {
-    return "Loading snapshots...";
-  }
-
-  if (snapshotCount === 0) {
-    return "No snapshots yet";
-  }
-
-  return `${snapshotCount} snapshots loaded`;
 };
 
 /* eslint-disable no-use-before-define -- Route exposes typed route-local hooks from the file route declared below. */
@@ -100,28 +65,6 @@ const SkillDetailRoute = () => {
   const queryClient = useQueryClient();
   const skillDetail = useSkillDetail(skillName);
   const skill = skillDetail.data;
-  const skillSnapshots = useSkillSnapshots(skillName);
-  const createSnapshot = useCreateSkillSnapshot(skillName);
-  const restoreSnapshot = useRestoreSkillSnapshot(skillName, {
-    onSuccess: async (result) => {
-      const nextSkillName = result.name;
-
-      if (nextSkillName !== skillName) {
-        await queryClient.invalidateQueries({ queryKey: skillListQueryKey });
-        await cancelSkillQueries(queryClient, skillName);
-        removeSkillQueries(queryClient, nextSkillName);
-        await navigate({
-          params: { skillName: nextSkillName },
-          search: { path },
-          to: "/skills/$skillName",
-        });
-        removeSkillQueries(queryClient, skillName);
-        return;
-      }
-
-      await invalidateSkillQueries(queryClient, skillName);
-    },
-  });
   const patchSkill = usePatchSkill(skillName);
 
   const setSelectedPath = (nextPath: string | undefined) => {
@@ -130,16 +73,6 @@ const SkillDetailRoute = () => {
       search: { path: nextPath === skillFilePath ? undefined : nextPath },
       to: "/skills/$skillName",
     });
-  };
-
-  const restore = async (snapshotNumber: number) => {
-    await restoreSnapshot.mutateAsync(snapshotNumber);
-  };
-
-  const takeSnapshot: Parameters<
-    typeof SkillDetailView
-  >[0]["onTakeSnapshot"] = async (input) => {
-    await createSnapshot.mutateAsync(input);
   };
 
   const saveChanges: Parameters<
@@ -160,13 +93,6 @@ const SkillDetailRoute = () => {
 
     await invalidateSkillQueries(queryClient, skillName);
   };
-  const snapshots = skillSnapshots.data ?? [];
-  const snapshotCount = snapshots.length;
-  const snapshotsStatus = getSnapshotsStatus(
-    snapshotCount,
-    skillSnapshots.isPending
-  );
-
   if (skillDetail.isPending && !skill) {
     return <SkillDetailSkeleton />;
   }
@@ -174,13 +100,9 @@ const SkillDetailRoute = () => {
   return (
     <SkillDetailView
       skill={skill}
-      snapshots={snapshots}
-      snapshotsStatus={snapshotsStatus}
       selectedPath={path}
       onPathChange={setSelectedPath}
-      onRestoreSnapshot={restore}
       onSaveChanges={saveChanges}
-      onTakeSnapshot={takeSnapshot}
     />
   );
 };

@@ -7,9 +7,6 @@ export const skillDetailQueryKey = (skillName: string | undefined) =>
 export const skillDetailQueryPrefix = (skillName: string | undefined) =>
   ["skills", "detail", skillName] as const;
 
-export const skillSnapshotsQueryKey = (skillName: string | undefined) =>
-  ["skills", "snapshots", skillName] as const;
-
 export const skillFileQueryKey = (
   skillName: string | undefined,
   path: string | undefined

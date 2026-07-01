@@ -7,6 +7,7 @@ import { ResourceManifest } from "@server/modules/skills/resource-manifest";
 import { SkillService } from "@server/modules/skills/service";
 import {
   getMcpOAuthResource,
+  getMcpSkillReadBearerAccess,
   getMcpSkillReadBearerUserId,
   getOAuthResource,
   getSkillReadBearerUserId,
@@ -51,7 +52,7 @@ const setDefaultSkillServicesForUser = (
   c: Context<AppBindings>,
   userId: string
 ) => {
-  c.set("currentUser", { id: userId });
+  c.set("currentUser", { canWrite: true, id: userId });
   const skillRepository = new SkillRepository(c.var.db, userId);
   const resourceManifest = new ResourceManifest(c.var.skillStorage);
 
@@ -194,19 +195,31 @@ export const createRequireMcpAuth = (
       return c.json({ error: "Unauthorized" }, 401);
     }
 
+    let canWrite = false;
     let userId: string | undefined;
 
     if (isSkillpackApiKeySecret(token)) {
       userId = verifyApiKeyUserId
         ? await verifyApiKeyUserId(token)
         : await c.var.apiKeyService.verifyApiKeySecret(token);
+      canWrite = Boolean(userId);
     } else {
       try {
-        userId = await verifyBearerUserId(
-          c.env,
-          requestOrigin,
-          c.req.raw.headers
-        );
+        if (options.getSkillReadBearerUserId) {
+          userId = await verifyBearerUserId(
+            c.env,
+            requestOrigin,
+            c.req.raw.headers
+          );
+        } else {
+          const access = await getMcpSkillReadBearerAccess(
+            c.env,
+            requestOrigin,
+            c.req.raw.headers
+          );
+          userId = access?.userId;
+          canWrite = access?.canWrite ?? false;
+        }
       } catch {
         c.header("WWW-Authenticate", challenge);
         return c.json({ error: "Unauthorized" }, 401);
@@ -219,6 +232,7 @@ export const createRequireMcpAuth = (
     }
 
     setSkillServicesForUser(c, userId);
+    c.set("currentUser", { canWrite, id: userId });
     await next();
   });
 };

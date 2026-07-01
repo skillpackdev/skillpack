@@ -3,14 +3,12 @@ import { apiError } from "@server/lib/http";
 import type { AppBindings } from "@server/types";
 import {
   createSkillSchema,
-  createSkillSnapshotSchema,
   forkSkillSchema,
   patchSkillSchema,
 } from "@skillpack/contracts/skills/requests";
 import {
   safeRelativePathSchema,
   skillNameSchema,
-  skillSnapshotNumberSchema,
 } from "@skillpack/core/primitives";
 import { Hono } from "hono";
 import type { Context } from "hono";
@@ -19,12 +17,10 @@ import { SkillModuleError, skillErrors } from "./errors";
 import {
   presentPatchedSkill,
   presentForkedSkills,
-  presentRestoredSkill,
   presentSkill,
   presentSkillFile,
   presentSkillList,
   presentSkillSummary,
-  presentSkillSnapshots,
 } from "./presenter";
 import type { ReadSkillFileByNameInput, ReadSkillFileResult } from "./types";
 
@@ -32,7 +28,6 @@ const skillErrorStatus = {
   "duplicate-resolved-skill-name": 400,
   "duplicate-resource-path": 400,
   "duplicate-skill-name": 409,
-  "duplicate-skill-snapshot": 409,
   "empty-skill-patch": 400,
   "invalid-file-path": 400,
   "invalid-skill-locator": 400,
@@ -41,7 +36,6 @@ const skillErrorStatus = {
   "skill-file-not-found": 404,
   "skill-not-found": 404,
   "skill-object-not-found": 404,
-  "skill-snapshot-not-found": 404,
 } as const;
 
 type SkillContext = Context<AppBindings>;
@@ -51,16 +45,6 @@ const parseSkillName = (value: string | undefined) => {
 
   if (!result.success) {
     throw skillErrors.invalidSkillLocator();
-  }
-
-  return result.data;
-};
-
-const parseRequiredSnapshot = (value: string | undefined) => {
-  const result = skillSnapshotNumberSchema.safeParse(value);
-
-  if (!result.success) {
-    throw skillErrors.skillSnapshotNotFound();
   }
 
   return result.data;
@@ -132,34 +116,6 @@ export const skillsRoute = new Hono<AppBindings>()
       parseSkillName(c.req.param("skillName"))
     );
     return c.body(null, 204);
-  })
-  .get("/:skillName/snapshots", async (c) => {
-    const result = await c.var.skillService.listSkillSnapshotsForSkillName(
-      parseSkillName(c.req.param("skillName"))
-    );
-    return c.json(presentSkillSnapshots(result.skill, result.snapshots));
-  })
-  .post(
-    "/:skillName/snapshots",
-    zValidator("json", createSkillSnapshotSchema),
-    async (c) => {
-      const snapshot = await c.var.skillService.createSkillSnapshotByName(
-        parseSkillName(c.req.param("skillName")),
-        c.req.valid("json")
-      );
-      return c.json(
-        presentSkillSnapshots({ name: snapshot.stateJson.name }, [snapshot])
-          .snapshots[0],
-        201
-      );
-    }
-  )
-  .post("/:skillName/snapshots/:snapshotNumber/restore", async (c) => {
-    const result = await c.var.skillService.restoreSkillSnapshotByName(
-      parseSkillName(c.req.param("skillName")),
-      parseRequiredSnapshot(c.req.param("snapshotNumber"))
-    );
-    return c.json(presentRestoredSkill(result));
   })
   .get("/:skillName/resources", async (c) => {
     const result = await c.var.skillService.readSkillTextFileByName(

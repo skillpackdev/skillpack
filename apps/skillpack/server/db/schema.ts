@@ -1,7 +1,4 @@
-import type {
-  SkillOriginJson,
-  SkillSnapshotStateJson,
-} from "@skillpack/contracts/skills/state";
+import type { SkillOriginJson } from "@skillpack/contracts/skills/state";
 import { relations } from "drizzle-orm";
 import {
   index,
@@ -14,21 +11,11 @@ import {
 export const skillsTable = sqliteTable(
   "skills",
   {
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    headVersionId: integer("head_version_id").notNull(),
     id: integer("id").primaryKey({ autoIncrement: true }),
     name: text("name").notNull(),
     ownerUserId: text("owner_user_id").notNull(),
-
-    allowedTools: text("allowed_tools"),
-    compatibility: text("compatibility"),
-    description: text("description").notNull(),
-    license: text("license"),
-    metadata: text("metadata", { mode: "json" }).$type<Record<
-      string,
-      string
-    > | null>(),
-    origin: text("origin", { mode: "json" }).$type<SkillOriginJson | null>(),
-
-    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
   },
   (table) => ({
@@ -39,11 +26,40 @@ export const skillsTable = sqliteTable(
   })
 );
 
-export const skillResourcesTable = sqliteTable(
-  "skill_resources",
+export const skillVersionsTable = sqliteTable(
+  "skill_versions",
+  {
+    allowedTools: text("allowed_tools"),
+    authorKind: text("author_kind", {
+      enum: ["user", "agent", "system"],
+    }).notNull(),
+    compatibility: text("compatibility"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    description: text("description").notNull(),
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    license: text("license"),
+    metadata: text("metadata", { mode: "json" }).$type<Record<
+      string,
+      string
+    > | null>(),
+    origin: text("origin", { mode: "json" }).$type<SkillOriginJson | null>(),
+    parentId: integer("parent_id"),
+    skillId: integer("skill_id").notNull(),
+    tokenId: text("token_id"),
+  },
+  (table) => ({
+    skillVersionParentIndex: index("skill_versions_parent_idx").on(
+      table.parentId
+    ),
+    skillVersionSkillIndex: index("skill_versions_skill_idx").on(table.skillId),
+  })
+);
+
+export const skillVersionResourcesTable = sqliteTable(
+  "skill_version_resources",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    skillId: integer("skill_id").notNull(),
+    versionId: integer("version_id").notNull(),
 
     mediaType: text("media_type").notNull(),
     path: text("path").notNull(),
@@ -53,68 +69,78 @@ export const skillResourcesTable = sqliteTable(
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
   },
   (table) => ({
-    skillResourceShaIndex: index("skill_resources_sha_idx").on(table.sha256),
-    skillResourceSkillIndex: index("skill_resources_skill_idx").on(
-      table.skillId
+    skillVersionResourceShaIndex: index("skill_version_resources_sha_idx").on(
+      table.sha256
     ),
-    skillResourceSkillPathUnique: uniqueIndex(
-      "skill_resources_skill_path_unique"
-    ).on(table.skillId, table.path),
+    skillVersionResourceVersionIndex: index(
+      "skill_version_resources_version_idx"
+    ).on(table.versionId),
+    skillVersionResourceVersionPathUnique: uniqueIndex(
+      "skill_version_resources_version_path_unique"
+    ).on(table.versionId, table.path),
   })
 );
 
-export const skillSnapshotsTable = sqliteTable(
-  "skill_snapshots",
+export const skillRefsTable = sqliteTable(
+  "skill_refs",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
     skillId: integer("skill_id").notNull(),
-    snapshotNumber: integer("snapshot_number").notNull(),
+    versionId: integer("version_id").notNull(),
 
-    label: text("label"),
-    note: text("note"),
-
-    stateJson: text("state_json", { mode: "json" })
-      .$type<SkillSnapshotStateJson>()
-      .notNull(),
-    stateVersion: integer("state_version").notNull(),
+    name: text("name").notNull(),
 
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
   },
   (table) => ({
-    skillSnapshotSkillIndex: index("skill_snapshots_skill_idx").on(
-      table.skillId
-    ),
-    skillSnapshotUnique: uniqueIndex("skill_snapshots_skill_number_unique").on(
+    skillRefSkillNameUnique: uniqueIndex("skill_refs_skill_name_unique").on(
       table.skillId,
-      table.snapshotNumber
+      table.name
     ),
+    skillRefVersionIndex: index("skill_refs_version_idx").on(table.versionId),
   })
 );
 
-export const skillsRelations = relations(skillsTable, ({ many }) => ({
-  resources: many(skillResourcesTable),
-  snapshots: many(skillSnapshotsTable),
+export const skillsRelations = relations(skillsTable, ({ many, one }) => ({
+  headVersion: one(skillVersionsTable, {
+    fields: [skillsTable.headVersionId],
+    references: [skillVersionsTable.id],
+  }),
+  refs: many(skillRefsTable),
+  versions: many(skillVersionsTable),
 }));
 
-export const skillResourcesRelations = relations(
-  skillResourcesTable,
-  ({ one }) => ({
+export const skillVersionsRelations = relations(
+  skillVersionsTable,
+  ({ many, one }) => ({
+    resources: many(skillVersionResourcesTable),
     skill: one(skillsTable, {
-      fields: [skillResourcesTable.skillId],
+      fields: [skillVersionsTable.skillId],
       references: [skillsTable.id],
     }),
   })
 );
 
-export const skillSnapshotsRelations = relations(
-  skillSnapshotsTable,
+export const skillVersionResourcesRelations = relations(
+  skillVersionResourcesTable,
   ({ one }) => ({
-    skill: one(skillsTable, {
-      fields: [skillSnapshotsTable.skillId],
-      references: [skillsTable.id],
+    version: one(skillVersionsTable, {
+      fields: [skillVersionResourcesTable.versionId],
+      references: [skillVersionsTable.id],
     }),
   })
 );
+
+export const skillRefsRelations = relations(skillRefsTable, ({ one }) => ({
+  skill: one(skillsTable, {
+    fields: [skillRefsTable.skillId],
+    references: [skillsTable.id],
+  }),
+  version: one(skillVersionsTable, {
+    fields: [skillRefsTable.versionId],
+    references: [skillVersionsTable.id],
+  }),
+}));
 
 export const apiKeysTable = sqliteTable(
   "api_keys",

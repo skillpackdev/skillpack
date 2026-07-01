@@ -13,14 +13,12 @@ import {
   skillDetailQueryKey,
   skillFileQueryKey,
   skillListQueryKey,
-  skillSnapshotsQueryKey,
 } from "./query-keys";
 import {
   discoverOriginSkills,
   fetchSkillDetail,
   fetchSkillFile,
   fetchSkillList,
-  fetchSkillSnapshots,
   readSkillDefinitions,
 } from "./requests";
 
@@ -36,12 +34,6 @@ export const activeSkillQueryOptions = (skillName: string) =>
   queryOptions<ResolvedSkill, Error, ResolvedSkill, QueryKey>({
     queryFn: () => fetchSkillDetail(skillName),
     queryKey: skillDetailQueryKey(skillName),
-  });
-
-export const skillSnapshotsQueryOptions = (skillName: string) =>
-  queryOptions({
-    queryFn: () => fetchSkillSnapshots(skillName),
-    queryKey: skillSnapshotsQueryKey(skillName),
   });
 
 export const skillFileQueryOptions = (skillName: string, path: string) =>

@@ -1,49 +1,16 @@
 import type {
   CreateSkillInput,
-  CreateSkillSnapshotInput,
   ForkSkillInput,
   PatchSkillInput,
 } from "@skillpack/contracts/skills/requests";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import {
-  skillListQueryKey,
-  skillQueryPrefix,
-  skillDetailQueryKey,
-  skillFileQueryPrefix,
-  skillSnapshotsQueryKey,
-} from "./query-keys";
+import { skillListQueryKey, skillQueryPrefix } from "./query-keys";
 import {
   createManagedSkill,
-  createManagedSkillSnapshot,
   forkManagedSkill,
   patchManagedSkill,
-  restoreManagedSkillSnapshot,
 } from "./requests";
-
-type RestoreSkillSnapshotResult = Awaited<
-  ReturnType<typeof restoreManagedSkillSnapshot>
->;
-
-interface RestoreSkillSnapshotMutationOptions {
-  onSuccess?: (result: RestoreSkillSnapshotResult) => Promise<void> | void;
-}
-
-const invalidateSkillQueries = async (
-  queryClient: ReturnType<typeof useQueryClient>,
-  skillName: string | undefined
-) => {
-  await queryClient.invalidateQueries({ queryKey: skillQueryPrefix });
-  await queryClient.invalidateQueries({
-    queryKey: skillDetailQueryKey(skillName),
-  });
-  await queryClient.invalidateQueries({
-    queryKey: skillFileQueryPrefix(skillName),
-  });
-  await queryClient.invalidateQueries({
-    queryKey: skillSnapshotsQueryKey(skillName),
-  });
-};
 
 export const useCreateSkill = () => {
   const queryClient = useQueryClient();
@@ -72,40 +39,6 @@ export const usePatchSkill = (skillName: string | undefined) => {
     },
   });
 };
-
-export const useCreateSkillSnapshot = (skillName: string | undefined) => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (input: CreateSkillSnapshotInput) => {
-      if (!skillName) {
-        throw new Error("Missing Skill Name");
-      }
-
-      return createManagedSkillSnapshot(skillName, input);
-    },
-    onSuccess: async () => {
-      await invalidateSkillQueries(queryClient, skillName);
-    },
-  });
-};
-
-export const useRestoreSkillSnapshot = (
-  skillName: string | undefined,
-  options?: RestoreSkillSnapshotMutationOptions
-) =>
-  useMutation({
-    mutationFn: (snapshotNumber: number) => {
-      if (!skillName) {
-        throw new Error("Missing Skill Name");
-      }
-
-      return restoreManagedSkillSnapshot(skillName, snapshotNumber);
-    },
-    onSuccess: async (result) => {
-      await options?.onSuccess?.(result);
-    },
-  });
 
 export const useForkSkill = () => {
   const queryClient = useQueryClient();

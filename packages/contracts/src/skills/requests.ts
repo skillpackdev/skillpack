@@ -2,8 +2,6 @@ import {
   optionalSkillAllowedToolsSchema,
   optionalSkillCompatibilitySchema,
   optionalSkillLicenseSchema,
-  optionalSkillSnapshotLabelSchema,
-  optionalSkillSnapshotNoteSchema,
   safeRelativePathSchema,
   skillDescriptionSchema,
   skillMetadataSchema,
@@ -57,16 +55,10 @@ export const patchSkillSchema = z
     "PATCH must change Skill state or resources"
   );
 
-export const createSkillSnapshotSchema = z.object({
-  label: optionalSkillSnapshotLabelSchema,
-  note: optionalSkillSnapshotNoteSchema,
-});
-
 export const forkSkillSchema = z
   .object({
     origin: skillOriginSchema,
     selections: z.array(originSelectionSchema).min(1),
-    snapshotLabel: optionalSkillSnapshotLabelSchema,
   })
   .superRefine((input, context) => {
     const seen = new Set<string>();
@@ -85,8 +77,5 @@ export const forkSkillSchema = z
   });
 
 export type CreateSkillInput = z.infer<typeof createSkillSchema>;
-export type CreateSkillSnapshotInput = z.infer<
-  typeof createSkillSnapshotSchema
->;
 export type ForkSkillInput = z.infer<typeof forkSkillSchema>;
 export type PatchSkillInput = z.infer<typeof patchSkillSchema>;

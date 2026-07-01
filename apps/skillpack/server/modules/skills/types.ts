@@ -1,20 +1,35 @@
 import type {
-  skillResourcesTable,
-  skillSnapshotsTable,
+  skillVersionResourcesTable,
+  skillVersionsTable,
   skillsTable,
 } from "@server/db/schema";
 import type {
   CreateSkillInput,
-  CreateSkillSnapshotInput,
   ForkSkillInput,
   PatchSkillInput,
 } from "@skillpack/contracts/skills/requests";
 import type { SkillOriginJson } from "@skillpack/contracts/skills/state";
 
-export type SkillRow = typeof skillsTable.$inferSelect;
-export type SkillResourceRow = typeof skillResourcesTable.$inferSelect;
-export type SkillSnapshotRow = typeof skillSnapshotsTable.$inferSelect;
+export type SkillIdentityRow = typeof skillsTable.$inferSelect;
+export type SkillVersionRow = typeof skillVersionsTable.$inferSelect;
+export type SkillResourceRow =
+  typeof skillVersionResourcesTable.$inferSelect & {
+    skillId: number;
+  };
 export type SkillOrigin = SkillOriginJson;
+
+export type SkillRow = Omit<SkillIdentityRow, "headVersionId"> &
+  Pick<
+    SkillVersionRow,
+    | "allowedTools"
+    | "compatibility"
+    | "description"
+    | "license"
+    | "metadata"
+    | "origin"
+  > & {
+    headVersionId: number;
+  };
 
 export interface SkillWithCurrentState {
   skill: SkillRow;
@@ -74,11 +89,6 @@ export interface PatchSkillResult {
   name: string;
 }
 
-export interface RestoreSkillSnapshotResult {
-  name: string;
-  restoredFromSnapshot: number;
-}
-
 export type ForkSkillResult =
   | {
       selection: ForkSkillInput["selections"][number];
@@ -96,6 +106,5 @@ export interface ForkSkillServiceResult {
 }
 
 export type CreateSkillServiceInput = CreateSkillInput;
-export type CreateSkillSnapshotServiceInput = CreateSkillSnapshotInput;
 export type ForkSkillServiceInput = ForkSkillInput;
 export type PatchSkillServiceInput = PatchSkillInput;

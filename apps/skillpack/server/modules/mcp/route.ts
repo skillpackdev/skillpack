@@ -4,7 +4,9 @@ import {
   ResourceTemplate,
 } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { skillContentPath } from "@server/constants";
+import { parseSkillFile } from "@server/shared/skill-file";
 import type { AppBindings } from "@server/types";
+import { createSkillSchema } from "@skillpack/contracts/skills/requests";
 import {
   safeRelativePathSchema,
   skillNameSchema,
@@ -15,6 +17,24 @@ import { z } from "zod";
 
 const skillpackLocationPattern =
   /^skill:\/\/skillpack\/(?<skillName>[a-z0-9]+(?:-[a-z0-9]+)*)$/u;
+
+const mcpSkillResourceSchema = z.object({
+  content: z.string(),
+  mediaType: z.string().min(1).optional(),
+  path: safeRelativePathSchema,
+});
+
+const updateSkillMcpSchema = z.object({
+  allowedTools: createSkillSchema.shape.allowedTools.optional(),
+  compatibility: createSkillSchema.shape.compatibility.optional(),
+  deleteResourcePaths: z.array(safeRelativePathSchema).default([]),
+  description: createSkillSchema.shape.description.optional(),
+  license: createSkillSchema.shape.license.optional(),
+  metadata: createSkillSchema.shape.metadata,
+  name: skillNameSchema.optional(),
+  skillName: skillNameSchema.describe("Skill Name to update."),
+  upsertResources: z.array(mcpSkillResourceSchema).default([]),
+});
 
 const escapeXml = (value: string) =>
   value
@@ -30,6 +50,25 @@ const toSkillpackLocation = (skillName: string) =>
 const toSkillpackResourceUri = (skillName: string, path: string) =>
   `skillpack-resource://skillpack/${skillName}?path=${encodeURIComponent(path)}`;
 
+const formatSkillMutationResult = (skill: {
+  description: string;
+  name: string;
+}) => ({
+  content: [
+    {
+      text: JSON.stringify(
+        {
+          description: skill.description,
+          location: toSkillpackLocation(skill.name),
+          name: skill.name,
+        },
+        null,
+        2
+      ),
+      type: "text" as const,
+    },
+  ],
+});
 const parseSkillpackLocation = (location: string) => {
   const match = skillpackLocationPattern.exec(location);
 
@@ -77,6 +116,37 @@ const formatSkillContent = (
   return `${formattedContent}\n</skill>`;
 };
 
+type UpdateSkillMcpInput = Omit<
+  z.infer<typeof updateSkillMcpSchema>,
+  "skillName"
+>;
+
+const toPatchSkillInput = (input: UpdateSkillMcpInput) => {
+  const skillFileResource = input.upsertResources.find(
+    (resource) => resource.path === skillContentPath
+  );
+
+  if (!skillFileResource) {
+    return input;
+  }
+
+  const parsedSkillFile = parseSkillFile(skillFileResource.content);
+
+  return {
+    ...input,
+    allowedTools: input.allowedTools ?? parsedSkillFile.allowedTools,
+    compatibility: input.compatibility ?? parsedSkillFile.compatibility,
+    content: parsedSkillFile.body,
+    description: input.description ?? parsedSkillFile.description,
+    license: input.license ?? parsedSkillFile.license,
+    metadata: input.metadata ?? parsedSkillFile.metadata,
+    name: input.name ?? parsedSkillFile.name,
+    upsertResources: input.upsertResources.filter(
+      (resource) => resource.path !== skillContentPath
+    ),
+  };
+};
+
 const formatSkillpackCatalog = (
   skills: {
     description: string;
@@ -113,7 +183,7 @@ const createMcpServer = (c: Context<AppBindings>) => {
     },
     {
       instructions:
-        "Use Skillpack MCP tools and resources to read authenticated Managed Skills. Do not treat skill:// locations as filesystem paths.",
+        "Use Skillpack MCP tools and resources to read, create, and update authenticated Managed Skills. Updates are patch-based, so agents can safely iterate by writing a better next version. Do not treat skill:// locations as filesystem paths.",
     }
   );
 
@@ -144,6 +214,48 @@ const createMcpServer = (c: Context<AppBindings>) => {
           },
         ],
       };
+    }
+  );
+
+  server.registerTool(
+    "create_skill",
+    {
+      description:
+        "Create a Skillpack Managed Skill in the authenticated user's library.",
+      inputSchema: createSkillSchema.shape,
+      title: "Create Skillpack Skill",
+    },
+    async (input) => {
+      if (!c.var.currentUser.canWrite) {
+        throw new Error("skills:write scope is required to create skills");
+      }
+
+      const result = await c.var.skillService.createSkill(input);
+
+      return formatSkillMutationResult(result.skill);
+    }
+  );
+
+  server.registerTool(
+    "update_skill",
+    {
+      description:
+        "Patch a Skillpack Managed Skill. Each successful update appends a recoverable version node and moves the skill head.",
+      inputSchema: updateSkillMcpSchema.shape,
+      title: "Update Skillpack Skill",
+    },
+    async (rawInput) => {
+      const { skillName, ...input } = updateSkillMcpSchema.parse(rawInput);
+      if (!c.var.currentUser.canWrite) {
+        throw new Error("skills:write scope is required to update skills");
+      }
+
+      const result = await c.var.skillService.patchSkillByName(
+        skillName,
+        toPatchSkillInput(input)
+      );
+
+      return formatSkillMutationResult(result);
     }
   );
 
