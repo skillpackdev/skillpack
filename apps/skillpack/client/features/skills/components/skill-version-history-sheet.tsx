@@ -185,6 +185,8 @@ export const SkillVersionHistorySheet = ({
   skillName,
   onOpenChange,
 }: SkillVersionHistorySheetProps) => {
+  const [autoSelectedCurrentVersionId, setAutoSelectedCurrentVersionId] =
+    useState<string>();
   const [restoreErrorMessage, setRestoreErrorMessage] = useState<string>();
   const [restoreVersionId, setRestoreVersionId] = useState<string>();
   const [selectedVersionId, setSelectedVersionId] = useState<string>();
@@ -196,6 +198,8 @@ export const SkillVersionHistorySheet = ({
   const selectedVersion = versions.find(
     (version) => version.id === selectedVersionId
   );
+  const currentVersionId = versions[0]?.id;
+  const selectedVersionIsCurrent = selectedVersion?.id === currentVersionId;
   const versionDetail = useSkillVersion(skillName, selectedVersionId, open);
   const upsertLabel = useUpsertSkillVersionLabel(skillName);
   const deleteLabel = useDeleteSkillVersionLabel(skillName);
@@ -205,14 +209,16 @@ export const SkillVersionHistorySheet = ({
 
   useEffect(() => {
     if (!open) {
+      setAutoSelectedCurrentVersionId(undefined);
       setSelectedVersionId(undefined);
       return;
     }
 
-    if (!selectedVersionId && versions[0]) {
-      setSelectedVersionId(versions[0].id);
+    if (currentVersionId && autoSelectedCurrentVersionId !== currentVersionId) {
+      setAutoSelectedCurrentVersionId(currentVersionId);
+      setSelectedVersionId(currentVersionId);
     }
-  }, [open, selectedVersionId, versions]);
+  }, [autoSelectedCurrentVersionId, currentVersionId, open]);
 
   const historyStatus = history.isPending
     ? "Loading version history..."
@@ -284,11 +290,16 @@ export const SkillVersionHistorySheet = ({
                       type="button"
                       variant="outline"
                       size="sm"
-                      disabled={mutationPending}
+                      disabled={mutationPending || selectedVersionIsCurrent}
+                      title={
+                        selectedVersionIsCurrent
+                          ? "This is the current version"
+                          : "Restore this version"
+                      }
                       onClick={() => setRestoreVersionId(selectedVersion.id)}
                     >
                       <RotateCcwIcon data-icon="inline-start" />
-                      Restore
+                      {selectedVersionIsCurrent ? "Current version" : "Restore"}
                     </Button>
                   </div>
                   <LabelForm

@@ -45,6 +45,9 @@ export const usePatchSkill = (skillName: string | undefined) => {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: skillListQueryKey });
+      await queryClient.invalidateQueries({
+        queryKey: skillVersionHistoryQueryPrefix(skillName),
+      });
     },
   });
 };
