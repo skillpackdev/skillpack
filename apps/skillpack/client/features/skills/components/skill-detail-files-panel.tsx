@@ -15,7 +15,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import { useSkillFile } from "../api/use-skill-detail";
 import type { ResourceDraftSession } from "../lib/resource-draft-session";
-import { skillFilePath } from "../lib/resource-drafts";
 import { getSkillResourceKind } from "../lib/resource-kind";
 import { getDetailFileSwitcherLabel } from "../lib/skill-detail-surface";
 import {
@@ -24,6 +23,7 @@ import {
   getTextSize,
   isEditableTextFile,
   skillFileMediaType,
+  skillFilePath,
 } from "../lib/skill-files";
 import type { SkillFile } from "../lib/skill-files";
 import { AddResourceDialog } from "./add-resource-dialog";

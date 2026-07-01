@@ -16,9 +16,8 @@ import { getChangeCount } from "../lib/resource-draft-session";
 import {
   buildResourcePatchInput,
   getTextResourceMediaType,
-  skillFilePath,
 } from "../lib/resource-drafts";
-import { getSkillFiles, getTextSize } from "../lib/skill-files";
+import { getSkillFiles, getTextSize, skillFilePath } from "../lib/skill-files";
 import {
   getSkillResourceEditSession,
   useSkillResourceEditStore,
@@ -336,7 +335,7 @@ export const SkillDetailView = ({
               type="button"
               variant="outline"
               size="icon-sm"
-              aria-label="Version history"
+              aria-label="Skill Version History"
               disabled={!skill}
               onClick={() => setHistoryOpen(true)}
             >

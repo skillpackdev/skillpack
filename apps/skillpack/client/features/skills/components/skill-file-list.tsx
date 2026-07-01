@@ -11,7 +11,10 @@ import {
 } from "@/components/ui/empty";
 import { cn } from "@/lib/utils";
 
-import { getFileStatus } from "../lib/resource-draft-session";
+import {
+  createResourceDraftSession,
+  getFileStatus,
+} from "../lib/resource-draft-session";
 import type { ResourceDraftSession } from "../lib/resource-draft-session";
 import { canDeleteFile } from "../lib/skill-files";
 import type { SkillFile } from "../lib/skill-files";
@@ -20,10 +23,10 @@ interface SkillFileListProps {
   files: SkillFile[];
   isEditing: boolean;
   selectedPath: string | undefined;
-  session: ResourceDraftSession;
+  session?: ResourceDraftSession;
   showHeader?: boolean;
-  onAddClick: () => void;
-  onDeletePath: (path: string) => void;
+  onAddClick?: () => void;
+  onDeletePath?: (path: string) => void;
   onSelectPath: (path: string) => void;
 }
 
@@ -46,11 +49,11 @@ const SkillFileListHeader = ({
   onAddClick,
 }: {
   isEditing: boolean;
-  onAddClick: () => void;
+  onAddClick?: () => void;
 }) => (
   <div className="flex min-h-14 items-center justify-between border-b border-border px-4 text-sm font-medium text-muted-foreground">
     <span>Files</span>
-    {isEditing ? (
+    {isEditing && onAddClick ? (
       <Button
         type="button"
         variant="ghost"
@@ -90,12 +93,12 @@ const SkillFileListItem = ({
   isEditing: boolean;
   isSelected: boolean;
   session: ResourceDraftSession;
-  onDeletePath: (path: string) => void;
+  onDeletePath?: (path: string) => void;
   onSelectPath: (path: string) => void;
 }) => {
   const status = getFileStatus(file.path, session);
   const isDeleted = status === "deleted";
-  const showDelete = isEditing && canDeleteFile(file);
+  const showDelete = isEditing && canDeleteFile(file) && onDeletePath;
   const showBadge = status !== "clean";
 
   return (
@@ -124,7 +127,7 @@ const SkillFileListItem = ({
             isDeleted ? `Undo delete ${file.path}` : `Delete ${file.path}`
           }
           className="absolute top-1/2 right-2 -translate-y-1/2"
-          onClick={() => onDeletePath(file.path)}
+          onClick={() => onDeletePath?.(file.path)}
         >
           {isDeleted ? (
             <Undo2Icon data-icon="inline-start" />
@@ -137,11 +140,13 @@ const SkillFileListItem = ({
   );
 };
 
+const readonlyResourceSession = createResourceDraftSession();
+
 export const SkillFileList = ({
   files,
   isEditing,
   selectedPath,
-  session,
+  session = readonlyResourceSession,
   showHeader = true,
   onAddClick,
   onDeletePath,

@@ -6,12 +6,8 @@ import type {
 } from "@skillpack/contracts/skills/requests";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import {
-  skillDetailQueryKey,
-  skillListQueryKey,
-  skillQueryPrefix,
-  skillVersionHistoryQueryPrefix,
-} from "./query-keys";
+import { invalidateManagedSkillQueries } from "./invalidation";
+import { skillQueryPrefix, skillVersionHistoryQueryPrefix } from "./query-keys";
 import {
   createManagedSkill,
   deleteSkillVersionLabel,
@@ -44,10 +40,7 @@ export const usePatchSkill = (skillName: string | undefined) => {
       return patchManagedSkill(skillName, input);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: skillListQueryKey });
-      await queryClient.invalidateQueries({
-        queryKey: skillVersionHistoryQueryPrefix(skillName),
-      });
+      await invalidateManagedSkillQueries(queryClient, skillName);
     },
   });
 };
@@ -115,13 +108,7 @@ export const useRestoreSkillVersion = (skillName: string | undefined) => {
       return restoreSkillVersion(skillName, versionId);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: skillListQueryKey });
-      await queryClient.invalidateQueries({
-        queryKey: skillDetailQueryKey(skillName),
-      });
-      await queryClient.invalidateQueries({
-        queryKey: skillVersionHistoryQueryPrefix(skillName),
-      });
+      await invalidateManagedSkillQueries(queryClient, skillName);
     },
   });
 };

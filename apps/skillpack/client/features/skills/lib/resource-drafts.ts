@@ -1,7 +1,7 @@
 import type { PatchSkillInput } from "@skillpack/contracts/skills/requests";
 import { safeRelativePathSchema } from "@skillpack/core/primitives";
 
-export const skillFilePath = "SKILL.md";
+import { skillFilePath } from "./skill-files";
 
 interface DraftFileInfo {
   mediaType: string;

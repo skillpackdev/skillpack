@@ -213,6 +213,30 @@ describe("app OAuth bearer skills read auth", () => {
     expect(seenUserIds).toStrictEqual(["user-oauth"]);
   });
 
+  it("rejects bearer tokens on Skill Version History routes", async () => {
+    const listVersionHistory = vi.fn<SkillService["listVersionHistory"]>();
+    const getSkillReadBearerUserId = vi
+      .fn<VerifySkillReadBearerUserId>()
+      .mockResolvedValue("user-oauth");
+    const app = createApp({
+      getSkillReadBearerUserId,
+      setSkillServicesForUser: setSkillServicesForUser(
+        { listVersionHistory },
+        []
+      ),
+    });
+
+    const response = await app.request(
+      "/api/v1/skills/demo/versions",
+      { headers: { authorization: "Bearer access-token" } },
+      testEnv
+    );
+
+    expect(response.status).toBe(401);
+    expect(getSkillReadBearerUserId).not.toHaveBeenCalled();
+    expect(listVersionHistory).not.toHaveBeenCalled();
+  });
+
   it("rejects bearer tokens on skills write routes", async () => {
     const getSkillReadBearerUserId = vi
       .fn<VerifySkillReadBearerUserId>()

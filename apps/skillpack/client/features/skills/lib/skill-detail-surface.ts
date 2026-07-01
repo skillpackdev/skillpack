@@ -1,4 +1,4 @@
-import { skillFilePath } from "./resource-drafts";
+import { skillFilePath } from "./skill-files";
 
 interface DetailHeaderStatusInput {
   changeCount: number;

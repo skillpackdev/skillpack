@@ -101,7 +101,7 @@ version labels are durable refs.
 ```
 skills(
   pk, name, owner_user_id,
-  head_version_pk NOT NULL REFERENCES skill_versions(pk),
+  head_version_pk NOT NULL,
   created_at, updated_at,
   UNIQUE(owner_user_id, name)
 )
@@ -110,10 +110,12 @@ skills(
 `head_version_pk` is a first-class NOT NULL column. In Skill domain tables,
 database-internal primary keys use `pk`; externally exposed opaque identifiers
 use `id`. This lets API JSON present stable `id` fields while keeping storage
-optimization details hidden. The database enforces the real invariant: every
-Skill has **exactly one** head, and that head **must exist**. A refs table could
-only enforce "at most one" via a unique index; it cannot enforce "exactly one,
-and present."
+optimization details hidden. The NOT NULL column enforces that every Skill has
+**exactly one** head pointer; the repository enforces that the pointer moves to
+an existing Skill Version by appending the version node and updating the head in
+one D1 `batch`. A refs table could only enforce "at most one" via a unique
+index; it cannot express this head pointer as directly as the Skill identity
+row.
 
 **`skill_versions` — immutable DAG nodes carrying content.**
 
@@ -288,9 +290,9 @@ surface, and D1/SQLite cannot maintain it as a real materialized view.
 
 ### Unify head and labels in one refs table (`kind` column)
 
-Rejected. Head is a moving work pointer with an "exactly one, must exist"
-invariant best enforced by a NOT NULL column on `skills`; Version Labels are
-optional retention markers. A shared `kind` column weakens the head invariant
+Rejected. Head is a moving work pointer with an "exactly one head pointer"
+invariant best represented by a NOT NULL column on `skills`; Version Labels are
+optional retention markers. A shared `kind` column weakens the head interface
 and conflates two different concepts.
 
 ### Content-address the manifest (Merkle tree) or delta-compress blobs

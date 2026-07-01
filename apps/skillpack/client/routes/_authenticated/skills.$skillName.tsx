@@ -7,16 +7,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { zodValidator } from "@tanstack/zod-adapter";
 import { z } from "zod";
 
-import {
-  skillDetailQueryKey,
-  skillFileQueryPrefix,
-  skillListQueryKey,
-} from "@/features/skills/api/query-keys";
+import { cancelManagedSkillCurrentQueries } from "@/features/skills/api/invalidation";
 import { activeSkillQueryOptions } from "@/features/skills/api/query-options";
 import { useSkillDetail } from "@/features/skills/api/use-skill-detail";
 import { usePatchSkill } from "@/features/skills/api/use-skill-mutations";
 import { SkillDetailSkeleton } from "@/features/skills/components/skill-page-skeletons";
-import { skillFilePath } from "@/features/skills/lib/resource-drafts";
+import { skillFilePath } from "@/features/skills/lib/skill-files";
 import { SkillDetailView } from "@/features/skills/views/skill-detail-view";
 
 const skillDetailSearchSchema = z.object({
@@ -30,29 +26,6 @@ const skillRouteParamsSchema = z.object({
 const parseSkillRouteParams = (params: unknown) => {
   const parsed = skillRouteParamsSchema.safeParse(params);
   return parsed.success ? parsed.data : false;
-};
-
-const cancelSkillQueries = async (
-  queryClient: ReturnType<typeof useQueryClient>,
-  skillName: string
-) => {
-  await queryClient.cancelQueries({ queryKey: skillDetailQueryKey(skillName) });
-  await queryClient.cancelQueries({
-    queryKey: skillFileQueryPrefix(skillName),
-  });
-};
-
-const invalidateSkillQueries = async (
-  queryClient: ReturnType<typeof useQueryClient>,
-  skillName: string
-) => {
-  await queryClient.invalidateQueries({ queryKey: skillListQueryKey });
-  await queryClient.invalidateQueries({
-    queryKey: skillDetailQueryKey(skillName),
-  });
-  await queryClient.invalidateQueries({
-    queryKey: skillFileQueryPrefix(skillName),
-  });
 };
 
 /* eslint-disable no-use-before-define -- Route exposes typed route-local hooks from the file route declared below. */
@@ -82,16 +55,13 @@ const SkillDetailRoute = () => {
     const nextSkillName = result.name;
 
     if (nextSkillName !== skillName) {
-      await cancelSkillQueries(queryClient, skillName);
+      await cancelManagedSkillCurrentQueries(queryClient, skillName);
       await navigate({
         params: { skillName: nextSkillName },
         search: { path },
         to: "/skills/$skillName",
       });
-      return;
     }
-
-    await invalidateSkillQueries(queryClient, skillName);
   };
   if (skillDetail.isPending && !skill) {
     return <SkillDetailSkeleton />;

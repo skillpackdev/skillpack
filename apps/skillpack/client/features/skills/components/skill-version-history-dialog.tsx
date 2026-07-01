@@ -73,14 +73,13 @@ import {
   useRestoreSkillVersion,
   useUpsertSkillVersionLabel,
 } from "../api/use-skill-mutations";
-import { createResourceDraftSession } from "../lib/resource-draft-session";
-import { skillFilePath } from "../lib/resource-drafts";
 import { getSkillResourceKind } from "../lib/resource-kind";
 import {
   getRawSkillVersionResourceUrl,
   getSkillFiles,
   getTextSize,
   skillFileMediaType,
+  skillFilePath,
 } from "../lib/skill-files";
 import type { SkillFile } from "../lib/skill-files";
 import { ResourceViewer } from "./resource-viewer";
@@ -97,12 +96,12 @@ interface VersionListItemProps {
   pending: boolean;
   selected: boolean;
   version: SkillVersionListItem;
-  onRemove: (version: SkillVersionListItem) => void;
-  onRename: (version: SkillVersionListItem) => void;
+  onEditLabel: (version: SkillVersionListItem) => void;
+  onRemoveLabel: (version: SkillVersionListItem) => void;
   onSelect: (versionId: string) => void;
 }
 
-interface RenameVersionDialogProps {
+interface SkillVersionLabelDialogProps {
   open: boolean;
   pending: boolean;
   version: SkillVersionListItem | undefined;
@@ -121,8 +120,6 @@ interface VersionResourceExplorerProps {
 }
 
 const labelMaxLength = 160;
-const readonlyResourceSession = createResourceDraftSession();
-const ignoreReadonlyFileAction = (_path?: string) => void _path;
 
 const formatVersionCreatedAt = (createdAt: string) =>
   formatDistanceToNow(new Date(createdAt), { addSuffix: true });
@@ -208,8 +205,8 @@ const VersionListItem = ({
   pending,
   selected,
   version,
-  onRemove,
-  onRename,
+  onEditLabel,
+  onRemoveLabel,
   onSelect,
 }: VersionListItemProps) => {
   const createdAtLabel = formatVersionCreatedAt(version.createdAt);
@@ -259,17 +256,17 @@ const VersionListItem = ({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="!w-56">
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => onRename(version)}>
+              <DropdownMenuItem onClick={() => onEditLabel(version)}>
                 <PencilIcon data-icon="inline-start" />
-                Rename version
+                Edit Skill Version Label
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={removeDisabled}
                 variant="destructive"
-                onClick={() => onRemove(version)}
+                onClick={() => onRemoveLabel(version)}
               >
                 <Trash2Icon data-icon="inline-start" />
-                Remove this version
+                Remove Skill Version Label
               </DropdownMenuItem>
             </DropdownMenuGroup>
           </DropdownMenuContent>
@@ -279,13 +276,13 @@ const VersionListItem = ({
   );
 };
 
-const RenameVersionDialog = ({
+const SkillVersionLabelDialog = ({
   open,
   pending,
   version,
   onOpenChange,
   onSubmit,
-}: RenameVersionDialogProps) => {
+}: SkillVersionLabelDialogProps) => {
   const [errorMessage, setErrorMessage] = useState<string>();
   const [label, setLabel] = useState("");
 
@@ -303,7 +300,7 @@ const RenameVersionDialog = ({
     }
 
     if (!nextLabel) {
-      setErrorMessage("Version label is required");
+      setErrorMessage("Skill Version Label is required");
       return;
     }
 
@@ -321,7 +318,7 @@ const RenameVersionDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Rename version</DialogTitle>
+          <DialogTitle>Edit Skill Version Label</DialogTitle>
           <DialogDescription>
             Give this Skill Version a label that is easy to find later.
           </DialogDescription>
@@ -331,7 +328,7 @@ const RenameVersionDialog = ({
             <Field>
               <Input
                 id="rename-version-label"
-                aria-label="Version label"
+                aria-label="Skill Version Label"
                 maxLength={labelMaxLength}
                 placeholder="Known good"
                 value={label}
@@ -419,9 +416,6 @@ const VersionResourceExplorer = ({
               files={files}
               isEditing={false}
               selectedPath={selectedFile?.path}
-              session={readonlyResourceSession}
-              onAddClick={ignoreReadonlyFileAction}
-              onDeletePath={ignoreReadonlyFileAction}
               onSelectPath={onSelectPath}
             />
           )}
@@ -447,7 +441,7 @@ export const SkillVersionHistoryDialog = ({
   const [actionErrorMessage, setActionErrorMessage] = useState<string>();
   const [autoSelectedCurrentVersionId, setAutoSelectedCurrentVersionId] =
     useState<string>();
-  const [renameVersion, setRenameVersion] = useState<SkillVersionListItem>();
+  const [labelVersion, setLabelVersion] = useState<SkillVersionListItem>();
   const [restoreErrorMessage, setRestoreErrorMessage] = useState<string>();
   const [restoreVersionId, setRestoreVersionId] = useState<string>();
   const [selectedPath, setSelectedPath] = useState<string>(skillFilePath);
@@ -473,7 +467,7 @@ export const SkillVersionHistoryDialog = ({
     if (!open) {
       setActionErrorMessage(undefined);
       setAutoSelectedCurrentVersionId(undefined);
-      setRenameVersion(undefined);
+      setLabelVersion(undefined);
       setRestoreErrorMessage(undefined);
       setRestoreVersionId(undefined);
       setSelectedPath(skillFilePath);
@@ -538,7 +532,7 @@ export const SkillVersionHistoryDialog = ({
           showCloseButton={false}
           className="!top-0 !left-0 !flex h-dvh w-dvw !max-w-none !translate-x-0 !translate-y-0 flex-col gap-0 rounded-none p-0 sm:!max-w-none"
         >
-          <DialogTitle className="sr-only">Version history</DialogTitle>
+          <DialogTitle className="sr-only">Skill Version History</DialogTitle>
           <header className="flex min-h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-4">
             <Button
               type="button"
@@ -594,7 +588,7 @@ export const SkillVersionHistoryDialog = ({
             />
             <aside className="flex min-h-0 flex-col border-border border-t bg-muted/30 lg:border-t-0 lg:border-l">
               <div className="flex min-h-16 shrink-0 items-center justify-between border-b border-border px-5">
-                <h2 className="font-medium">Version history</h2>
+                <h2 className="font-medium">Skill Version History</h2>
               </div>
               {actionErrorMessage ? (
                 <p className="border-b border-border px-5 py-3 text-sm text-destructive">
@@ -617,10 +611,10 @@ export const SkillVersionHistoryDialog = ({
                         pending={mutationPending}
                         selected={version.id === selectedVersionId}
                         version={version}
-                        onRemove={(nextVersion) => {
+                        onEditLabel={setLabelVersion}
+                        onRemoveLabel={(nextVersion) => {
                           void removeVersionLabel(nextVersion);
                         }}
-                        onRename={setRenameVersion}
                         onSelect={setSelectedVersionId}
                       />
                     ))}
@@ -633,13 +627,13 @@ export const SkillVersionHistoryDialog = ({
           </div>
         </DialogContent>
       </Dialog>
-      <RenameVersionDialog
-        open={Boolean(renameVersion)}
+      <SkillVersionLabelDialog
+        open={Boolean(labelVersion)}
         pending={upsertLabel.isPending}
-        version={renameVersion}
+        version={labelVersion}
         onOpenChange={(nextOpen) => {
           if (!nextOpen) {
-            setRenameVersion(undefined);
+            setLabelVersion(undefined);
           }
         }}
         onSubmit={renameSelectedVersion}

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
 import type { ResourceDraftSession } from "../lib/resource-draft-session";
-import { skillFilePath } from "../lib/resource-drafts";
+import { skillFilePath } from "../lib/skill-files";
 
 interface SkillResourceEditState {
   addedPaths: Set<string>;

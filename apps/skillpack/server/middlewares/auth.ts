@@ -145,6 +145,21 @@ const createRequireSkillReadBearerAuth = (
   });
 };
 
+const isSkillDeliveryReadRequest = (c: Context<AppBindings>) => {
+  if (c.req.method !== "GET") {
+    return false;
+  }
+
+  const { pathname } = new URL(c.req.url);
+  const skillsPrefix = "/api/v1/skills";
+  const segments = pathname
+    .slice(skillsPrefix.length)
+    .split("/")
+    .filter(Boolean);
+
+  return !segments.includes("versions");
+};
+
 export const createRequireSkillsAuth = (
   options: AuthMiddlewareOptions
 ): MiddlewareHandler<AppBindings> => {
@@ -155,7 +170,7 @@ export const createRequireSkillsAuth = (
   );
 
   return createMiddleware<AppBindings>(async (c, next) => {
-    if (c.req.method === "GET") {
+    if (isSkillDeliveryReadRequest(c)) {
       return await requireSkillReadAuth(c, next);
     }
 
