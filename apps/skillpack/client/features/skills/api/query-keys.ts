@@ -18,6 +18,12 @@ export const skillVersionQueryKey = (
   versionId: string | undefined
 ) => ["skills", "version", skillName, versionId] as const;
 
+export const skillVersionFileQueryKey = (
+  skillName: string | undefined,
+  versionId: string | undefined,
+  path: string | undefined
+) => ["skills", "version-file", skillName, versionId, path] as const;
+
 export const skillFileQueryKey = (
   skillName: string | undefined,
   path: string | undefined

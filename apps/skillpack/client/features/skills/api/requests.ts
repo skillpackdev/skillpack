@@ -69,6 +69,30 @@ export const fetchSkillVersion = async (
   return resolvedSkillSchema.parse(data);
 };
 
+export const fetchSkillVersionFile = async (
+  skillName: string,
+  versionId: string,
+  path: string
+): Promise<SkillResourceResponse> => {
+  const response = await api.get(
+    `skills/${skillName}/versions/${versionId}/resources/raw`,
+    { searchParams: { path } }
+  );
+  const content = await response.text();
+  const size = Number(
+    response.headers.get("content-length") ??
+      new TextEncoder().encode(content).length
+  );
+
+  return skillResourceResponseSchema.parse({
+    content,
+    mediaType: response.headers.get("content-type") ?? "text/plain",
+    path,
+    sha256: response.headers.get("x-skill-resource-sha256") ?? "unknown",
+    size,
+  });
+};
+
 export const fetchSkillFile = async (
   skillName: string,
   path: string

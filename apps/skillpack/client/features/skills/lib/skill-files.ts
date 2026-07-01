@@ -48,6 +48,19 @@ export const getRawResourceUrl = (
   return `/api/v1/skills/${skillName}/resources/raw?${searchParams}`;
 };
 
+export const getRawSkillVersionResourceUrl = (
+  skillName: string | undefined,
+  versionId: string | undefined,
+  path: string | undefined
+) => {
+  if (!(skillName && versionId && path && path !== skillFilePath)) {
+    return;
+  }
+
+  const searchParams = new URLSearchParams({ path });
+  return `/api/v1/skills/${skillName}/versions/${versionId}/resources/raw?${searchParams}`;
+};
+
 export const isEditableTextFile = (file: SkillFile) => {
   if (file.path === skillFilePath) {
     return true;

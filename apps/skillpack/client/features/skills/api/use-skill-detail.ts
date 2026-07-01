@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   activeSkillQueryOptions,
   skillFileQueryOptions,
+  skillVersionFileQueryOptions,
   skillVersionHistoryQueryOptions,
   skillVersionQueryOptions,
 } from "./query-options";
@@ -40,4 +41,19 @@ export const useSkillVersion = (
   useQuery({
     enabled: Boolean(skillName && versionId) && enabled,
     ...skillVersionQueryOptions(skillName ?? "", versionId ?? ""),
+  });
+
+export const useSkillVersionFile = (
+  skillName: string | undefined,
+  versionId: string | undefined,
+  path: string | undefined,
+  enabled: boolean
+) =>
+  useQuery({
+    enabled: Boolean(skillName && versionId && path) && enabled,
+    ...skillVersionFileQueryOptions(
+      skillName ?? "",
+      versionId ?? "",
+      path ?? ""
+    ),
   });

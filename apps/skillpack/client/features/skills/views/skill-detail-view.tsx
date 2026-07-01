@@ -11,7 +11,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 
 import { useSkillList } from "../api/use-skill-list";
 import { SkillDetailFilesPanel } from "../components/skill-detail-files-panel";
-import { SkillVersionHistorySheet } from "../components/skill-version-history-sheet";
+import { SkillVersionHistoryDialog } from "../components/skill-version-history-dialog";
 import { getChangeCount } from "../lib/resource-draft-session";
 import {
   buildResourcePatchInput,
@@ -379,7 +379,7 @@ export const SkillDetailView = ({
           onSelectPath={onPathChange}
         />
       </div>
-      <SkillVersionHistorySheet
+      <SkillVersionHistoryDialog
         open={historyOpen}
         skillName={skill?.name}
         onOpenChange={setHistoryOpen}
