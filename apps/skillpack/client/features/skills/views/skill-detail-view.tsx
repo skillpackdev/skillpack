@@ -2,8 +2,8 @@ import type { PatchSkillInput } from "@skillpack/contracts/skills/requests";
 import type { ResolvedSkill } from "@skillpack/contracts/skills/responses";
 import { skillNameSchema } from "@skillpack/core/primitives";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeftIcon } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { ArrowLeftIcon, HistoryIcon } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 
 import { useSkillList } from "../api/use-skill-list";
 import { SkillDetailFilesPanel } from "../components/skill-detail-files-panel";
+import { SkillVersionHistorySheet } from "../components/skill-version-history-sheet";
 import { getChangeCount } from "../lib/resource-draft-session";
 import {
   buildResourcePatchInput,
@@ -159,6 +160,7 @@ export const SkillDetailView = ({
   onPathChange,
   onSaveChanges,
 }: SkillDetailViewProps) => {
+  const [historyOpen, setHistoryOpen] = useState(false);
   const skillList = useSkillList();
   const {
     addedPaths,
@@ -332,6 +334,17 @@ export const SkillDetailView = ({
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 md:gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!skill}
+              onClick={() => setHistoryOpen(true)}
+            >
+              <HistoryIcon data-icon="inline-start" />
+              <span className="hidden md:inline">Version history</span>
+              <span className="md:hidden">History</span>
+            </Button>
             <SkillHeaderActions
               canSaveChanges={canSaveChanges}
               isEditing={isEditing}
@@ -366,6 +379,11 @@ export const SkillDetailView = ({
           onSelectPath={onPathChange}
         />
       </div>
+      <SkillVersionHistorySheet
+        open={historyOpen}
+        skillName={skill?.name}
+        onOpenChange={setHistoryOpen}
+      />
     </>
   );
 };

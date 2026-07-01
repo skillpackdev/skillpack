@@ -7,6 +7,17 @@ export const skillDetailQueryKey = (skillName: string | undefined) =>
 export const skillDetailQueryPrefix = (skillName: string | undefined) =>
   ["skills", "detail", skillName] as const;
 
+export const skillVersionHistoryQueryKey = (skillName: string | undefined) =>
+  ["skills", "versions", skillName] as const;
+
+export const skillVersionHistoryQueryPrefix = (skillName: string | undefined) =>
+  ["skills", "versions", skillName] as const;
+
+export const skillVersionQueryKey = (
+  skillName: string | undefined,
+  versionId: string | undefined
+) => ["skills", "version", skillName, versionId] as const;
+
 export const skillFileQueryKey = (
   skillName: string | undefined,
   path: string | undefined

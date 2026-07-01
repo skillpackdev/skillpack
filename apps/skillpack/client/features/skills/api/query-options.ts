@@ -13,12 +13,16 @@ import {
   skillDetailQueryKey,
   skillFileQueryKey,
   skillListQueryKey,
+  skillVersionHistoryQueryKey,
+  skillVersionQueryKey,
 } from "./query-keys";
 import {
   discoverOriginSkills,
   fetchSkillDetail,
   fetchSkillFile,
   fetchSkillList,
+  fetchSkillVersion,
+  fetchSkillVersionHistory,
   readSkillDefinitions,
 } from "./requests";
 
@@ -40,6 +44,21 @@ export const skillFileQueryOptions = (skillName: string, path: string) =>
   queryOptions({
     queryFn: () => fetchSkillFile(skillName, path),
     queryKey: skillFileQueryKey(skillName, path),
+  });
+
+export const skillVersionHistoryQueryOptions = (skillName: string) =>
+  queryOptions({
+    queryFn: () => fetchSkillVersionHistory(skillName),
+    queryKey: skillVersionHistoryQueryKey(skillName),
+  });
+
+export const skillVersionQueryOptions = (
+  skillName: string,
+  versionId: string
+) =>
+  queryOptions({
+    queryFn: () => fetchSkillVersion(skillName, versionId),
+    queryKey: skillVersionQueryKey(skillName, versionId),
   });
 
 export const originDiscoveryQueryOptions = (origin: SkillOriginInput) => {

@@ -15,6 +15,7 @@ import type {
   CreateSkillInput,
   ForkSkillInput,
   PatchSkillInput,
+  SkillVersionLabelInput,
 } from "@skillpack/contracts/skills/requests";
 import {
   forkSkillResponseSchema,
@@ -23,6 +24,8 @@ import {
   skillListResponseSchema,
   skillPatchedResponseSchema,
   skillResourceResponseSchema,
+  skillVersionHistoryResponseSchema,
+  skillVersionLabelResponseSchema,
 } from "@skillpack/contracts/skills/responses";
 import type {
   ResolvedSkill,
@@ -31,6 +34,8 @@ import type {
   SkillListResponse,
   SkillPatchedResponse,
   SkillResourceResponse,
+  SkillVersionHistoryResponse,
+  SkillVersionLabelResponse,
 } from "@skillpack/contracts/skills/responses";
 
 import { api } from "@/shared/api/client";
@@ -44,6 +49,23 @@ export const fetchSkillDetail = async (
   skillName: string
 ): Promise<ResolvedSkill> => {
   const data = await api.get(`skills/${skillName}`).json();
+  return resolvedSkillSchema.parse(data);
+};
+
+export const fetchSkillVersionHistory = async (
+  skillName: string
+): Promise<SkillVersionHistoryResponse> => {
+  const data = await api.get(`skills/${skillName}/versions`).json();
+  return skillVersionHistoryResponseSchema.parse(data);
+};
+
+export const fetchSkillVersion = async (
+  skillName: string,
+  versionId: string
+): Promise<ResolvedSkill> => {
+  const data = await api
+    .get(`skills/${skillName}/versions/${versionId}`)
+    .json();
   return resolvedSkillSchema.parse(data);
 };
 
@@ -95,4 +117,32 @@ export const forkManagedSkill = async (
 ): Promise<ForkSkillResponse> => {
   const data = await api.post("skills/fork", { json: input }).json();
   return forkSkillResponseSchema.parse(data);
+};
+
+export const upsertSkillVersionLabel = async (
+  skillName: string,
+  versionId: string,
+  input: SkillVersionLabelInput
+): Promise<SkillVersionLabelResponse> => {
+  const data = await api
+    .put(`skills/${skillName}/versions/${versionId}/label`, { json: input })
+    .json();
+  return skillVersionLabelResponseSchema.parse(data);
+};
+
+export const deleteSkillVersionLabel = async (
+  skillName: string,
+  versionId: string
+): Promise<void> => {
+  await api.delete(`skills/${skillName}/versions/${versionId}/label`);
+};
+
+export const restoreSkillVersion = async (
+  skillName: string,
+  versionId: string
+): Promise<ResolvedSkill> => {
+  const data = await api
+    .post(`skills/${skillName}/versions/${versionId}/restore`)
+    .json();
+  return resolvedSkillSchema.parse(data);
 };
