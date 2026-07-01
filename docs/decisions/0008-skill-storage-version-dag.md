@@ -6,20 +6,24 @@ consulted: Current Skillpack codebase, ADR-0001, ADR-0004, ADR-0007, Obsidian Fi
 informed: Future Skillpack maintainers and coding agents
 ---
 
-# ADR-0008: Give the MCP Endpoint Skill Authoring on a Content-Addressed Version DAG
+# ADR-0008: Restructure Skill Storage as a Content-Addressed Version DAG
 
-Skillpack will let agents create and modify Managed Skills through the `/mcp`
-endpoint, so an agent can close the loop: read a Skill, improve it, and write it
-back without a human in the middle. To make that write path safe without
-polluting it with backup ceremony, the underlying storage moves from a single
-mutable Skill row to a content-addressed version DAG with a mutable head pointer
-and named tags — a mini-Git model.
+Skillpack restructures Skill storage from a single mutable Skill row into a
+content-addressed version DAG with a mutable head pointer and named tags — a
+mini-Git model. Enabling agents to author and iterate on Skills through `/mcp`
+is the trigger for this work, but the redesign is not an MCP feature: it makes
+every write surface (REST included) safe and non-destructive, unifies
+versioning across the system, and folds the old parallel snapshot mechanism into
+one coherent model.
 
 ## Context
 
-ADR-0007 made `/mcp` read-only: it exposes `list`/`read` tools and resolves
-current Managed Skill state by Skill Name under the `skills:read` scope. Agents
-can consume Skills but cannot author or iterate on them remotely.
+The trigger for this decision is agent authoring over MCP. ADR-0007 made `/mcp`
+read-only: it exposes `list`/`read` tools and resolves current Managed Skill
+state by Skill Name under the `skills:read` scope. Agents can consume Skills but
+cannot author or iterate on them remotely. Designing that write path forced a
+harder question — is the current storage model safe to write against at all? —
+and the answer reshaped the data model for the whole system, not just for MCP.
 
 Self-iteration is the missing half of the loop. In first-principles terms,
 self-iteration is CRUD minus Delete: read the current state, improve it, write
@@ -267,28 +271,3 @@ without a schema change.
 
 Rejected for v1. Delete is the one CRUD verb outside the self-iteration loop and
 the highest-blast-radius operation; it stays off the agent surface.
-
-## Implementation Plan
-
-- Schema: add `skill_versions` and `skill_version_resources`; convert
-  `skill_refs` to tags-only; add `skills.head_version_id`; move content fields
-  off `skills`; remove `skill_snapshots`. Generate a Drizzle migration with a
-  semantic name.
-- Repository: append-version + move-head write batch; head-resolved reads;
-  tag create/list; `restore = move/merge ref`. Remove snapshot repository
-  methods.
-- Service: reframe `create`/`patch` onto the version DAG; remove
-  `createSkillSnapshotByName` / `restoreSkillSnapshotByName` /
-  `createSnapshotForSkill`.
-- Auth: add `skillWriteScope`; include it in `skillpackOAuthScopes` and
-  `mcpProtectedResourceScopes`; resolve a `canWrite` capability in MCP
-  middleware.
-- MCP: add `create_skill` and `update_skill` tools; update server
-  `instructions`. No `delete_skill`, no snapshot tool.
-- REST/client: remove the `/snapshots` route, presenter, `SkillSnapshotStateJson`
-  contract, and the client snapshots sheet.
-- Docs: update the MCP delivery docs and README for the write surface.
-- Tests: write-path DAG batch, head resolution, capability gating (API key vs
-  OAuth scope), and MCP authoring tools.
-- Explicitly out of scope for v1: GC execution (D1 pruning trigger and R2 blob
-  reclamation) and the tag-based snapshot UI.
