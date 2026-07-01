@@ -114,7 +114,7 @@ Rules:
 - Repositories must not validate HTTP requests.
 - Repositories must not depend on Hono context.
 
-Managed Skill current-state writes are a repository concern. The service prepares the Resource Manifest first, then the repository updates the `skills` row, current `skill_resources` rows, nullable origin JSON, and parent skill timestamp with D1 `batch()` and SQL subqueries where needed. Snapshot creation copies the complete current Skill state into `skill_snapshots.state_json` with a `state_version`. Do not use Drizzle `transaction()` for this path; D1 rejects the SQL `BEGIN`/`SAVEPOINT` statements emitted by that adapter.
+Managed Skill current-state writes are a repository concern. The service prepares the Resource Manifest first, then the repository appends an immutable `skill_versions` node, writes complete `skill_version_resources` manifest rows, and moves `skills.head_version_pk` with D1 `batch()` and SQL subqueries where needed. Version Labels live in `skill_version_labels` and retain labelled versions permanently. Do not use Drizzle `transaction()` for this path; D1 rejects the SQL `BEGIN`/`SAVEPOINT` statements emitted by that adapter.
 
 Repository create methods should create complete domain objects, not placeholder rows. For Managed Skills, creation means committing the `skills` row and current resource rows together after the service has prepared any R2 objects. This avoids invisible records that reserve a unique name but cannot be resolved or listed as a Managed Skill.
 
