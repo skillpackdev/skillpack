@@ -588,6 +588,14 @@ describe("app MCP auth", () => {
         ],
       },
     });
+    const toolNames = body.result.tools.map((tool) => tool.name);
+    toolNames.sort();
+    expect(toolNames).toStrictEqual([
+      "create_skill",
+      "list_skills",
+      "read_skill",
+      "update_skill",
+    ]);
     expect(updateSkillTool?.inputSchema.properties).not.toHaveProperty(
       "content"
     );

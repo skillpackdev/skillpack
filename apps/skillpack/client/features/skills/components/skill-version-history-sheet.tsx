@@ -185,6 +185,7 @@ export const SkillVersionHistorySheet = ({
   skillName,
   onOpenChange,
 }: SkillVersionHistorySheetProps) => {
+  const [restoreErrorMessage, setRestoreErrorMessage] = useState<string>();
   const [restoreVersionId, setRestoreVersionId] = useState<string>();
   const [selectedVersionId, setSelectedVersionId] = useState<string>();
   const history = useSkillVersionHistory(skillName, open);
@@ -222,8 +223,14 @@ export const SkillVersionHistorySheet = ({
       return;
     }
 
-    await restoreVersion.mutateAsync(restoreVersionId);
-    setRestoreVersionId(undefined);
+    setRestoreErrorMessage(undefined);
+
+    try {
+      await restoreVersion.mutateAsync(restoreVersionId);
+      setRestoreVersionId(undefined);
+    } catch (error) {
+      setRestoreErrorMessage(await getApiErrorMessage(error));
+    }
   };
 
   return (
@@ -324,6 +331,7 @@ export const SkillVersionHistorySheet = ({
         open={Boolean(restoreVersionId)}
         onOpenChange={(nextOpen) => {
           if (!nextOpen) {
+            setRestoreErrorMessage(undefined);
             setRestoreVersionId(undefined);
           }
         }}
@@ -335,6 +343,9 @@ export const SkillVersionHistorySheet = ({
               Restore creates a new current version from the selected historical
               version. The current version remains in Version History.
             </AlertDialogDescription>
+            {restoreErrorMessage ? (
+              <p className="text-sm text-destructive">{restoreErrorMessage}</p>
+            ) : null}
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={restoreVersion.isPending}>
