@@ -55,6 +55,10 @@ export const patchSkillSchema = z
     "PATCH must change Skill state or resources"
   );
 
+export const skillVersionLabelSchema = z.object({
+  label: z.string().trim().min(1).max(160),
+});
+
 export const forkSkillSchema = z
   .object({
     origin: skillOriginSchema,
@@ -79,3 +83,4 @@ export const forkSkillSchema = z
 export type CreateSkillInput = z.infer<typeof createSkillSchema>;
 export type ForkSkillInput = z.infer<typeof forkSkillSchema>;
 export type PatchSkillInput = z.infer<typeof patchSkillSchema>;
+export type SkillVersionLabelInput = z.infer<typeof skillVersionLabelSchema>;

@@ -12,10 +12,10 @@ export const skillsTable = sqliteTable(
   "skills",
   {
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
-    headVersionId: integer("head_version_id").notNull(),
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    headVersionPk: integer("head_version_pk").notNull(),
     name: text("name").notNull(),
     ownerUserId: text("owner_user_id").notNull(),
+    pk: integer("pk").primaryKey({ autoIncrement: true }),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
   },
   (table) => ({
@@ -30,43 +30,38 @@ export const skillVersionsTable = sqliteTable(
   "skill_versions",
   {
     allowedTools: text("allowed_tools"),
-    authorKind: text("author_kind", {
-      enum: ["user", "agent", "system"],
-    }).notNull(),
     compatibility: text("compatibility"),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     description: text("description").notNull(),
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: text("id").notNull(),
     license: text("license"),
     metadata: text("metadata", { mode: "json" }).$type<Record<
       string,
       string
     > | null>(),
     origin: text("origin", { mode: "json" }).$type<SkillOriginJson | null>(),
-    parentId: integer("parent_id"),
-    skillId: integer("skill_id").notNull(),
-    tokenId: text("token_id"),
+    parentPk: integer("parent_pk"),
+    pk: integer("pk").primaryKey({ autoIncrement: true }),
+    skillPk: integer("skill_pk").notNull(),
   },
   (table) => ({
+    skillVersionIdUnique: uniqueIndex("skill_versions_id_unique").on(table.id),
     skillVersionParentIndex: index("skill_versions_parent_idx").on(
-      table.parentId
+      table.parentPk
     ),
-    skillVersionSkillIndex: index("skill_versions_skill_idx").on(table.skillId),
+    skillVersionSkillIndex: index("skill_versions_skill_idx").on(table.skillPk),
   })
 );
 
 export const skillVersionResourcesTable = sqliteTable(
   "skill_version_resources",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    versionId: integer("version_id").notNull(),
-
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     mediaType: text("media_type").notNull(),
     path: text("path").notNull(),
     sha256: text("sha256").notNull(),
     size: integer("size").notNull(),
-
-    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    versionPk: integer("version_pk").notNull(),
   },
   (table) => ({
     skillVersionResourceShaIndex: index("skill_version_resources_sha_idx").on(
@@ -74,49 +69,57 @@ export const skillVersionResourcesTable = sqliteTable(
     ),
     skillVersionResourceVersionIndex: index(
       "skill_version_resources_version_idx"
-    ).on(table.versionId),
+    ).on(table.versionPk),
     skillVersionResourceVersionPathUnique: uniqueIndex(
       "skill_version_resources_version_path_unique"
-    ).on(table.versionId, table.path),
+    ).on(table.versionPk, table.path),
   })
 );
 
-export const skillRefsTable = sqliteTable(
-  "skill_refs",
+export const skillVersionLabelsTable = sqliteTable(
+  "skill_version_labels",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    skillId: integer("skill_id").notNull(),
-    versionId: integer("version_id").notNull(),
-
-    name: text("name").notNull(),
-
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    id: text("id").notNull(),
+    label: text("label").notNull(),
+    pk: integer("pk").primaryKey({ autoIncrement: true }),
+    skillPk: integer("skill_pk").notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+    versionPk: integer("version_pk").notNull(),
   },
   (table) => ({
-    skillRefSkillNameUnique: uniqueIndex("skill_refs_skill_name_unique").on(
-      table.skillId,
-      table.name
+    skillVersionLabelIdUnique: uniqueIndex("skill_version_labels_id_unique").on(
+      table.id
     ),
-    skillRefVersionIndex: index("skill_refs_version_idx").on(table.versionId),
+    skillVersionLabelSkillVersionUnique: uniqueIndex(
+      "skill_version_labels_skill_version_unique"
+    ).on(table.skillPk, table.versionPk),
+    skillVersionLabelVersionIndex: index("skill_version_labels_version_idx").on(
+      table.versionPk
+    ),
   })
 );
 
 export const skillsRelations = relations(skillsTable, ({ many, one }) => ({
   headVersion: one(skillVersionsTable, {
-    fields: [skillsTable.headVersionId],
-    references: [skillVersionsTable.id],
+    fields: [skillsTable.headVersionPk],
+    references: [skillVersionsTable.pk],
   }),
-  refs: many(skillRefsTable),
+  labels: many(skillVersionLabelsTable),
   versions: many(skillVersionsTable),
 }));
 
 export const skillVersionsRelations = relations(
   skillVersionsTable,
   ({ many, one }) => ({
+    label: one(skillVersionLabelsTable, {
+      fields: [skillVersionsTable.pk],
+      references: [skillVersionLabelsTable.versionPk],
+    }),
     resources: many(skillVersionResourcesTable),
     skill: one(skillsTable, {
-      fields: [skillVersionsTable.skillId],
-      references: [skillsTable.id],
+      fields: [skillVersionsTable.skillPk],
+      references: [skillsTable.pk],
     }),
   })
 );
@@ -125,22 +128,25 @@ export const skillVersionResourcesRelations = relations(
   skillVersionResourcesTable,
   ({ one }) => ({
     version: one(skillVersionsTable, {
-      fields: [skillVersionResourcesTable.versionId],
-      references: [skillVersionsTable.id],
+      fields: [skillVersionResourcesTable.versionPk],
+      references: [skillVersionsTable.pk],
     }),
   })
 );
 
-export const skillRefsRelations = relations(skillRefsTable, ({ one }) => ({
-  skill: one(skillsTable, {
-    fields: [skillRefsTable.skillId],
-    references: [skillsTable.id],
-  }),
-  version: one(skillVersionsTable, {
-    fields: [skillRefsTable.versionId],
-    references: [skillVersionsTable.id],
-  }),
-}));
+export const skillVersionLabelsRelations = relations(
+  skillVersionLabelsTable,
+  ({ one }) => ({
+    skill: one(skillsTable, {
+      fields: [skillVersionLabelsTable.skillPk],
+      references: [skillsTable.pk],
+    }),
+    version: one(skillVersionsTable, {
+      fields: [skillVersionLabelsTable.versionPk],
+      references: [skillVersionsTable.pk],
+    }),
+  })
+);
 
 export const apiKeysTable = sqliteTable(
   "api_keys",
@@ -178,7 +184,6 @@ export const oauthClientTable = sqliteTable(
     createdAt: integer("createdAt", { mode: "timestamp_ms" }),
     disabled: integer("disabled", { mode: "boolean" }),
     enableEndSession: integer("enableEndSession", { mode: "boolean" }),
-    grantTypes: text("grantTypes", { mode: "json" }).$type<string[] | null>(),
     icon: text("icon"),
     id: text("id").primaryKey().notNull(),
     metadata: text("metadata", { mode: "json" }).$type<Record<
@@ -186,119 +191,126 @@ export const oauthClientTable = sqliteTable(
       unknown
     > | null>(),
     name: text("name"),
-    policy: text("policy"),
-    postLogoutRedirectUris: text("postLogoutRedirectUris", {
-      mode: "json",
-    }).$type<string[] | null>(),
-    public: integer("public", { mode: "boolean" }),
-    redirectUris: text("redirectUris", { mode: "json" })
-      .$type<string[]>()
-      .notNull(),
-    referenceId: text("referenceId"),
-    requirePKCE: integer("requirePKCE", { mode: "boolean" }),
-    responseTypes: text("responseTypes", { mode: "json" }).$type<
-      string[] | null
-    >(),
-    scopes: text("scopes", { mode: "json" }).$type<string[] | null>(),
-    skipConsent: integer("skipConsent", { mode: "boolean" }),
-    softwareId: text("softwareId"),
-    softwareStatement: text("softwareStatement"),
-    softwareVersion: text("softwareVersion"),
-    subjectType: text("subjectType"),
-    tokenEndpointAuthMethod: text("tokenEndpointAuthMethod"),
-    tos: text("tos"),
-    type: text("type"),
+    redirectURLs: text("redirectURLs", { mode: "json" }).$type<string[]>(),
+    type: text("type").notNull(),
     updatedAt: integer("updatedAt", { mode: "timestamp_ms" }),
-    uri: text("uri"),
     userId: text("userId"),
   },
   (table) => ({
     oauthClientClientIdUnique: uniqueIndex("oauthClient_clientId_unique").on(
       table.clientId
     ),
-    oauthClientUserIdIndex: index("oauthClient_userId_idx").on(table.userId),
+  })
+);
+
+export const oauthConsentTable = sqliteTable("oauthConsent", {
+  clientId: text("clientId").notNull(),
+  consentGiven: integer("consentGiven", { mode: "boolean" }),
+  createdAt: integer("createdAt", { mode: "timestamp_ms" }),
+  id: text("id").primaryKey().notNull(),
+  scopes: text("scopes", { mode: "json" }).$type<string[]>(),
+  updatedAt: integer("updatedAt", { mode: "timestamp_ms" }),
+  userId: text("userId").notNull(),
+});
+
+export const oauthAccessTokenTable = sqliteTable(
+  "oauthAccessToken",
+  {
+    accessToken: text("accessToken").notNull(),
+    accessTokenExpiresAt: integer("accessTokenExpiresAt", {
+      mode: "timestamp_ms",
+    }).notNull(),
+    clientId: text("clientId").notNull(),
+    createdAt: integer("createdAt", { mode: "timestamp_ms" }),
+    id: text("id").primaryKey().notNull(),
+    refreshToken: text("refreshToken"),
+    refreshTokenExpiresAt: integer("refreshTokenExpiresAt", {
+      mode: "timestamp_ms",
+    }),
+    scopes: text("scopes", { mode: "json" }).$type<string[]>(),
+    updatedAt: integer("updatedAt", { mode: "timestamp_ms" }),
+    userId: text("userId"),
+  },
+  (table) => ({
+    oauthAccessTokenAccessTokenUnique: uniqueIndex(
+      "oauthAccessToken_accessToken_unique"
+    ).on(table.accessToken),
+    oauthAccessTokenRefreshTokenUnique: uniqueIndex(
+      "oauthAccessToken_refreshToken_unique"
+    ).on(table.refreshToken),
   })
 );
 
 export const oauthRefreshTokenTable = sqliteTable(
   "oauthRefreshToken",
   {
-    authTime: integer("authTime", { mode: "timestamp_ms" }),
-    clientId: text("clientId").notNull(),
-    createdAt: integer("createdAt", { mode: "timestamp_ms" }),
-    expiresAt: integer("expiresAt", { mode: "timestamp_ms" }),
-    id: text("id").primaryKey().notNull(),
-    referenceId: text("referenceId"),
-    revoked: integer("revoked", { mode: "timestamp_ms" }),
-    scopes: text("scopes", { mode: "json" }).$type<string[]>().notNull(),
-    sessionId: text("sessionId"),
-    token: text("token").notNull(),
-    userId: text("userId").notNull(),
-  },
-  (table) => ({
-    oauthRefreshTokenClientIdIndex: index("oauthRefreshToken_clientId_idx").on(
-      table.clientId
-    ),
-    oauthRefreshTokenSessionIdIndex: index(
-      "oauthRefreshToken_sessionId_idx"
-    ).on(table.sessionId),
-    oauthRefreshTokenTokenUnique: uniqueIndex(
-      "oauthRefreshToken_token_unique"
-    ).on(table.token),
-    oauthRefreshTokenUserIdIndex: index("oauthRefreshToken_userId_idx").on(
-      table.userId
-    ),
-  })
-);
-
-export const oauthAccessTokenTable = sqliteTable(
-  "oauthAccessToken",
-  {
-    clientId: text("clientId").notNull(),
-    createdAt: integer("createdAt", { mode: "timestamp_ms" }),
-    expiresAt: integer("expiresAt", { mode: "timestamp_ms" }),
-    id: text("id").primaryKey().notNull(),
-    referenceId: text("referenceId"),
-    refreshId: text("refreshId"),
-    scopes: text("scopes", { mode: "json" }).$type<string[]>().notNull(),
-    sessionId: text("sessionId"),
-    token: text("token"),
-    userId: text("userId"),
-  },
-  (table) => ({
-    oauthAccessTokenClientIdIndex: index("oauthAccessToken_clientId_idx").on(
-      table.clientId
-    ),
-    oauthAccessTokenRefreshIdIndex: index("oauthAccessToken_refreshId_idx").on(
-      table.refreshId
-    ),
-    oauthAccessTokenSessionIdIndex: index("oauthAccessToken_sessionId_idx").on(
-      table.sessionId
-    ),
-    oauthAccessTokenTokenUnique: uniqueIndex(
-      "oauthAccessToken_token_unique"
-    ).on(table.token),
-    oauthAccessTokenUserIdIndex: index("oauthAccessToken_userId_idx").on(
-      table.userId
-    ),
-  })
-);
-
-export const oauthConsentTable = sqliteTable(
-  "oauthConsent",
-  {
+    accessTokenId: text("accessTokenId").notNull(),
     clientId: text("clientId").notNull(),
     createdAt: integer("createdAt", { mode: "timestamp_ms" }),
     id: text("id").primaryKey().notNull(),
-    referenceId: text("referenceId"),
-    scopes: text("scopes", { mode: "json" }).$type<string[]>().notNull(),
+    refreshToken: text("refreshToken").notNull(),
+    refreshTokenExpiresAt: integer("refreshTokenExpiresAt", {
+      mode: "timestamp_ms",
+    }).notNull(),
+    scopes: text("scopes", { mode: "json" }).$type<string[]>(),
     updatedAt: integer("updatedAt", { mode: "timestamp_ms" }),
     userId: text("userId"),
   },
   (table) => ({
-    oauthConsentClientIdIndex: index("oauthConsent_clientId_idx").on(
-      table.clientId
-    ),
-    oauthConsentUserIdIndex: index("oauthConsent_userId_idx").on(table.userId),
+    oauthRefreshTokenRefreshTokenUnique: uniqueIndex(
+      "oauthRefreshToken_refreshToken_unique"
+    ).on(table.refreshToken),
   })
 );
+
+export const userTable = sqliteTable("user", {
+  createdAt: integer("createdAt", { mode: "timestamp_ms" }).notNull(),
+  email: text("email").notNull().unique(),
+  emailVerified: integer("emailVerified", { mode: "boolean" })
+    .notNull()
+    .$defaultFn(() => false),
+  id: text("id").primaryKey().notNull(),
+  image: text("image"),
+  name: text("name").notNull(),
+  updatedAt: integer("updatedAt", { mode: "timestamp_ms" }).notNull(),
+});
+
+export const sessionTable = sqliteTable("session", {
+  createdAt: integer("createdAt", { mode: "timestamp_ms" }).notNull(),
+  expiresAt: integer("expiresAt", { mode: "timestamp_ms" }).notNull(),
+  id: text("id").primaryKey().notNull(),
+  ipAddress: text("ipAddress"),
+  token: text("token").notNull().unique(),
+  updatedAt: integer("updatedAt", { mode: "timestamp_ms" }).notNull(),
+  userAgent: text("userAgent"),
+  userId: text("userId").notNull(),
+});
+
+export const accountTable = sqliteTable("account", {
+  accessToken: text("accessToken"),
+  accessTokenExpiresAt: integer("accessTokenExpiresAt", {
+    mode: "timestamp_ms",
+  }),
+  accountId: text("accountId").notNull(),
+  createdAt: integer("createdAt", { mode: "timestamp_ms" }).notNull(),
+  id: text("id").primaryKey().notNull(),
+  idToken: text("idToken"),
+  password: text("password"),
+  providerId: text("providerId").notNull(),
+  refreshToken: text("refreshToken"),
+  refreshTokenExpiresAt: integer("refreshTokenExpiresAt", {
+    mode: "timestamp_ms",
+  }),
+  scope: text("scope"),
+  updatedAt: integer("updatedAt", { mode: "timestamp_ms" }).notNull(),
+  userId: text("userId").notNull(),
+});
+
+export const verificationTable = sqliteTable("verification", {
+  createdAt: integer("createdAt", { mode: "timestamp_ms" }),
+  expiresAt: integer("expiresAt", { mode: "timestamp_ms" }).notNull(),
+  id: text("id").primaryKey().notNull(),
+  identifier: text("identifier").notNull(),
+  updatedAt: integer("updatedAt", { mode: "timestamp_ms" }),
+  value: text("value").notNull(),
+});

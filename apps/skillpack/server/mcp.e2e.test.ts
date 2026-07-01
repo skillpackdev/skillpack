@@ -31,7 +31,7 @@ const applyFreshSchema = async (db: D1Database) => {
     "0000_initial.sql",
     "0001_better_auth_oauth_provider.sql",
     "0002_api_keys.sql",
-    "0003_skill_version_dag.sql",
+    "0003_skill_version_history.sql",
   ]) {
     await applyMigration(db, join(process.cwd(), "migrations", migration));
   }
@@ -171,7 +171,7 @@ describe("MCP Skill authoring e2e", () => {
     const repository = new SkillRepository(createDb(env.DB), "user-e2e");
     const skill = await repository.findSkillByName("mcp-demo");
     const versionResources = await repository.listVersionResources(
-      skill?.id ?? 0
+      skill?.pk ?? 0
     );
 
     expect({

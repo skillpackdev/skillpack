@@ -5,6 +5,7 @@ import {
   createSkillSchema,
   forkSkillSchema,
   patchSkillSchema,
+  skillVersionLabelSchema,
 } from "@skillpack/contracts/skills/requests";
 import {
   safeRelativePathSchema,
@@ -21,6 +22,8 @@ import {
   presentSkillFile,
   presentSkillList,
   presentSkillSummary,
+  presentSkillVersionHistory,
+  presentSkillVersionLabel,
 } from "./presenter";
 import type { ReadSkillFileByNameInput, ReadSkillFileResult } from "./types";
 
@@ -31,6 +34,8 @@ const skillErrorStatus = {
   "empty-skill-patch": 400,
   "invalid-file-path": 400,
   "invalid-skill-locator": 400,
+  "invalid-version-label": 400,
+  "invalid-version-selector": 400,
   "reserved-resource-path": 400,
   "skill-creation-failed": 500,
   "skill-file-not-found": 404,
@@ -50,6 +55,14 @@ const parseSkillName = (value: string | undefined) => {
   return result.data;
 };
 
+const parseVersionId = (value: string | undefined) => {
+  if (!value) {
+    throw skillErrors.invalidVersionSelector();
+  }
+
+  return value;
+};
+
 const parseFilePath = (path: string | undefined) => {
   const pathResult = safeRelativePathSchema.safeParse(path);
 
@@ -65,6 +78,16 @@ const getRequestedSkillFileInput = (
 ): ReadSkillFileByNameInput => ({
   path: parseFilePath(c.req.query("path")),
   skillName: parseSkillName(c.req.param("skillName")),
+});
+
+const getRequestedSkillVersionInput = (c: SkillContext) => ({
+  skillName: parseSkillName(c.req.param("skillName")),
+  versionId: parseVersionId(c.req.param("versionId")),
+});
+
+const getRequestedSkillVersionFileInput = (c: SkillContext) => ({
+  ...getRequestedSkillVersionInput(c),
+  path: parseFilePath(c.req.query("path")),
 });
 
 const getRawFileHeaders = (result: ReadSkillFileResult) =>
@@ -98,6 +121,49 @@ export const skillsRoute = new Hono<AppBindings>()
       ? 201
       : 422;
     return c.json(presentForkedSkills(result), status);
+  })
+  .get("/:skillName/versions", async (c) => {
+    const result = await c.var.skillService.listVersionHistory(
+      parseSkillName(c.req.param("skillName"))
+    );
+    return c.json(presentSkillVersionHistory(result));
+  })
+  .get("/:skillName/versions/:versionId", async (c) => {
+    const result = await c.var.skillService.resolveSkillVersion(
+      getRequestedSkillVersionInput(c)
+    );
+    return c.json(presentSkill(result));
+  })
+  .get("/:skillName/versions/:versionId/resources/raw", async (c) => {
+    const result = await c.var.skillService.readSkillVersionResourceByName(
+      getRequestedSkillVersionFileInput(c)
+    );
+    return new Response(result.object.body, {
+      headers: getRawFileHeaders(result),
+    });
+  })
+  .put(
+    "/:skillName/versions/:versionId/label",
+    zValidator("json", skillVersionLabelSchema),
+    async (c) => {
+      const result = await c.var.skillService.upsertVersionLabel({
+        ...getRequestedSkillVersionInput(c),
+        label: c.req.valid("json").label,
+      });
+      return c.json(presentSkillVersionLabel(result));
+    }
+  )
+  .delete("/:skillName/versions/:versionId/label", async (c) => {
+    await c.var.skillService.deleteVersionLabel(
+      getRequestedSkillVersionInput(c)
+    );
+    return c.body(null, 204);
+  })
+  .post("/:skillName/versions/:versionId/restore", async (c) => {
+    const result = await c.var.skillService.restoreVersion(
+      getRequestedSkillVersionInput(c)
+    );
+    return c.json(presentSkill(result));
   })
   .get("/:skillName", async (c) => {
     const skillName = parseSkillName(c.req.param("skillName"));

@@ -37,6 +37,7 @@
     "@hono/zod-validator": "^0.7.0",
     "@hookform/resolvers": "^5.4.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "@paralleldrive/cuid2": "^3.3.0",
     "@skillpack/contracts": "workspace:*",
     "@skillpack/core": "workspace:*",
     "@tailwindcss/vite": "^4.1.7",

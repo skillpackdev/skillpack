@@ -71,6 +71,22 @@ export const skillPatchedResponseSchema = z.object({
   name: skillNameSchema,
 });
 
+export const skillVersionListItemSchema = z.object({
+  createdAt: z.string().datetime(),
+  id: z.string().min(1),
+  label: z.string().min(1).nullable(),
+});
+
+export const skillVersionHistoryResponseSchema = z.object({
+  versions: z.array(skillVersionListItemSchema),
+});
+
+export const skillVersionLabelResponseSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  versionId: z.string().min(1),
+});
+
 export const forkSkillResultSchema = z.discriminatedUnion("status", [
   z.object({
     selection: originSelectionSchema,
@@ -95,3 +111,10 @@ export type SkillListItem = z.infer<typeof skillListItemSchema>;
 export type SkillListResponse = z.infer<typeof skillListResponseSchema>;
 export type SkillPatchedResponse = z.infer<typeof skillPatchedResponseSchema>;
 export type SkillResourceResponse = z.infer<typeof skillResourceResponseSchema>;
+export type SkillVersionHistoryResponse = z.infer<
+  typeof skillVersionHistoryResponseSchema
+>;
+export type SkillVersionLabelResponse = z.infer<
+  typeof skillVersionLabelResponseSchema
+>;
+export type SkillVersionListItem = z.infer<typeof skillVersionListItemSchema>;

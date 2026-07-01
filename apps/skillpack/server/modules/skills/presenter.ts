@@ -5,6 +5,8 @@ import {
   skillListResponseSchema,
   skillPatchedResponseSchema,
   skillResourceResponseSchema,
+  skillVersionHistoryResponseSchema,
+  skillVersionLabelResponseSchema,
 } from "@skillpack/contracts/skills/responses";
 
 import type {
@@ -13,6 +15,8 @@ import type {
   ReadSkillTextFileResult,
   ResolvedSkillResult,
   SkillOrigin,
+  SkillVersionHistoryResult,
+  SkillVersionLabelResult,
   SkillWithCurrentState,
 } from "./types";
 
@@ -102,3 +106,15 @@ export const presentSkillFile = (result: ReadSkillTextFileResult) =>
 
 export const presentPatchedSkill = (result: PatchSkillResult) =>
   skillPatchedResponseSchema.parse(result);
+
+export const presentSkillVersionHistory = (result: SkillVersionHistoryResult) =>
+  skillVersionHistoryResponseSchema.parse({
+    versions: result.versions.map((version) => ({
+      createdAt: version.createdAt.toISOString(),
+      id: version.id,
+      label: version.label,
+    })),
+  });
+
+export const presentSkillVersionLabel = (result: SkillVersionLabelResult) =>
+  skillVersionLabelResponseSchema.parse(result);

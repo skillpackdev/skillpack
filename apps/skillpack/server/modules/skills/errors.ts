@@ -5,6 +5,8 @@ export type SkillErrorCode =
   | "empty-skill-patch"
   | "invalid-file-path"
   | "invalid-skill-locator"
+  | "invalid-version-label"
+  | "invalid-version-selector"
   | "reserved-resource-path"
   | "skill-creation-failed"
   | "skill-file-not-found"
@@ -45,6 +47,16 @@ export const skillErrors = {
     new SkillModuleError(
       "invalid-skill-locator",
       "Valid skill locator is required"
+    ),
+  invalidVersionLabel: () =>
+    new SkillModuleError(
+      "invalid-version-label",
+      "Version label must not be empty"
+    ),
+  invalidVersionSelector: () =>
+    new SkillModuleError(
+      "invalid-version-selector",
+      "Valid Skill Version ID is required"
     ),
   reservedResourcePath: () =>
     new SkillModuleError(

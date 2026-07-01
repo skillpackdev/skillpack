@@ -1,4 +1,5 @@
 import type {
+  skillVersionLabelsTable,
   skillVersionResourcesTable,
   skillVersionsTable,
   skillsTable,
@@ -12,13 +13,14 @@ import type { SkillOriginJson } from "@skillpack/contracts/skills/state";
 
 export type SkillIdentityRow = typeof skillsTable.$inferSelect;
 export type SkillVersionRow = typeof skillVersionsTable.$inferSelect;
+export type SkillVersionLabelRow = typeof skillVersionLabelsTable.$inferSelect;
 export type SkillResourceRow =
   typeof skillVersionResourcesTable.$inferSelect & {
-    skillId: number;
+    skillPk: number;
   };
 export type SkillOrigin = SkillOriginJson;
 
-export type SkillRow = Omit<SkillIdentityRow, "headVersionId"> &
+export type SkillRow = Omit<SkillIdentityRow, "headVersionPk"> &
   Pick<
     SkillVersionRow,
     | "allowedTools"
@@ -28,7 +30,8 @@ export type SkillRow = Omit<SkillIdentityRow, "headVersionId"> &
     | "metadata"
     | "origin"
   > & {
-    headVersionId: number;
+    headVersionPk: number;
+    versionId: string;
   };
 
 export interface SkillWithCurrentState {
@@ -40,6 +43,26 @@ export interface ResolvedSkillResult extends SkillWithCurrentState {
   resources: SkillResourceRow[];
 }
 
+export interface SkillVersionListItem {
+  createdAt: Date;
+  id: string;
+  label: string | null;
+}
+
+export interface SkillVersionHistoryResult {
+  versions: SkillVersionListItem[];
+}
+
+export interface SkillVersionLabelResult {
+  id: string;
+  label: string;
+  versionId: string;
+}
+
+export interface VersionedSkillResult extends ResolvedSkillResult {
+  version: SkillVersionRow;
+}
+
 export interface SkillFileResource {
   mediaType: string;
   path: string;
@@ -49,12 +72,16 @@ export interface SkillFileResource {
 
 export interface ReadSkillFileInput {
   path: string;
-  skillId: number;
+  skillPk: number;
 }
 
 export interface ReadSkillFileByNameInput {
   path: string;
   skillName: string;
+}
+
+export interface ReadSkillVersionFileByNameInput extends ReadSkillFileByNameInput {
+  versionId: string;
 }
 
 export interface ReadSkillFileResult {
@@ -103,6 +130,11 @@ export type ForkSkillResult =
 
 export interface ForkSkillServiceResult {
   results: ForkSkillResult[];
+}
+
+export interface VersionSelectorInput {
+  skillName: string;
+  versionId: string;
 }
 
 export type CreateSkillServiceInput = CreateSkillInput;
