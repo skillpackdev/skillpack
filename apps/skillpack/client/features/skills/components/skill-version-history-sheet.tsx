@@ -242,7 +242,7 @@ export const SkillVersionHistorySheet = ({
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="sm:max-w-4xl">
+        <SheetContent className="!w-full sm:!w-[min(92vw,72rem)] sm:!max-w-6xl">
           <SheetHeader className="pr-16">
             <SheetTitle>Version history</SheetTitle>
           </SheetHeader>
