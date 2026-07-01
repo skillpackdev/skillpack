@@ -48,12 +48,7 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@/components/ui/empty";
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Field, FieldError, FieldGroup } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
   Item,
@@ -333,11 +328,9 @@ const RenameVersionDialog = ({
         <form className="grid gap-4" onSubmit={(event) => void submit(event)}>
           <FieldGroup>
             <Field>
-              <FieldLabel htmlFor="rename-version-label">
-                Version label
-              </FieldLabel>
               <Input
                 id="rename-version-label"
+                aria-label="Version label"
                 maxLength={labelMaxLength}
                 placeholder="Known good"
                 value={label}

@@ -337,13 +337,12 @@ export const SkillDetailView = ({
             <Button
               type="button"
               variant="outline"
-              size="sm"
+              size="icon-sm"
+              aria-label="Version history"
               disabled={!skill}
               onClick={() => setHistoryOpen(true)}
             >
               <HistoryIcon data-icon="inline-start" />
-              <span className="hidden md:inline">Version history</span>
-              <span className="md:hidden">History</span>
             </Button>
             <SkillHeaderActions
               canSaveChanges={canSaveChanges}
