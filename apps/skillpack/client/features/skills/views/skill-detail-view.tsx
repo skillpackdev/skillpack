@@ -146,11 +146,9 @@ const SkillHeaderActions = ({
   }
 
   return (
-    <>
-      <Button type="button" size="sm" onClick={onBeginEdit}>
-        Edit
-      </Button>
-    </>
+    <Button type="button" size="sm" onClick={onBeginEdit}>
+      Edit
+    </Button>
   );
 };
 
@@ -342,7 +340,7 @@ export const SkillDetailView = ({
               disabled={!skill}
               onClick={() => setHistoryOpen(true)}
             >
-              <HistoryIcon data-icon="inline-start" />
+              <HistoryIcon />
             </Button>
             <SkillHeaderActions
               canSaveChanges={canSaveChanges}

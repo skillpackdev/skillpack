@@ -213,6 +213,7 @@ const VersionListItem = ({
   onSelect,
 }: VersionListItemProps) => {
   const createdAtLabel = formatVersionCreatedAt(version.createdAt);
+  const title = version.label ?? createdAtLabel;
   const removeDisabled = pending || !version.label;
 
   return (
@@ -232,7 +233,7 @@ const VersionListItem = ({
           onClick={() => onSelect(version.id)}
         >
           <ItemTitle className="max-w-full">
-            <span className="truncate">{version.label ?? createdAtLabel}</span>
+            <span className="truncate">{title}</span>
             {current ? <Badge variant="secondary">Current</Badge> : null}
           </ItemTitle>
           {version.label ? (
@@ -250,7 +251,7 @@ const VersionListItem = ({
                 type="button"
                 variant="ghost"
                 size="icon-xs"
-                aria-label={`Actions for ${version.label ?? createdAtLabel}`}
+                aria-label={`Actions for ${title}`}
               />
             }
           >
