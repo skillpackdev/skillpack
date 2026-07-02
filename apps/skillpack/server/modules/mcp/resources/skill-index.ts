@@ -10,14 +10,18 @@ const sha256Digest = (sha256: string) => `sha256:${sha256}`;
 const optionalFrontmatterEntry = (value: unknown) =>
   value === null || value === undefined || value === "" ? undefined : value;
 
-const skillFrontmatter = (skill: SkillRow) => ({
-  "allowed-tools": optionalFrontmatterEntry(skill.allowedTools),
-  compatibility: optionalFrontmatterEntry(skill.compatibility),
-  description: skill.description,
-  license: optionalFrontmatterEntry(skill.license),
-  metadata: optionalFrontmatterEntry(skill.metadata),
-  name: skill.name,
-});
+const skillFrontmatter = (skill: SkillRow) =>
+  Object.fromEntries(
+    Object.entries({
+      ...skill.frontmatter,
+      "allowed-tools": optionalFrontmatterEntry(skill.allowedTools),
+      compatibility: optionalFrontmatterEntry(skill.compatibility),
+      description: skill.description,
+      license: optionalFrontmatterEntry(skill.license),
+      metadata: optionalFrontmatterEntry(skill.metadata),
+      name: skill.name,
+    }).filter(([, value]) => value !== undefined)
+  );
 
 const skillIndexResourceDefinition = {
   description:

@@ -13,7 +13,7 @@ A reusable instruction package intended for agent consumption. A skill may inclu
 _Avoid_: Prompt snippet, plugin, tool
 
 **Skill Origin**:
-The provenance of a Managed Skill before it entered Skillpack, such as GitHub, npm, another registry, user authoring, agent creation, or API creation. Origin is nullable structured metadata captured in each Skill Version. Origin never forms the skill's primary identity and does not track whether the current content has diverged from the origin.
+The provenance of a Managed Skill before it entered Skillpack, such as GitHub, npm, another registry, user authoring, agent creation, or API creation. Origin is nullable structured metadata captured on the Managed Skill identity row. Origin never forms the skill's primary identity and does not track whether the current content has diverged from the origin.
 _Avoid_: Skill Source, source type, import backend, upstream identity, native source, sync state
 
 **Origin Adapter**:
@@ -49,7 +49,7 @@ An agent-facing private SEP-2640 `skill://{skillName}/SKILL.md` resource locator
 _Avoid_: Numeric ID locator, source-qualified locator, GitHub locator, raw URL, direct download URL, stable version pin
 
 **Skill Version**:
-A saved historical state of one Managed Skill, created whenever durable Skill content or metadata changes. A Skill Version contains the Skill File, Resource Manifest, descriptive metadata, Skill Origin, author provenance, and a parent pointer to the previous version.
+A saved historical state of one Managed Skill, created whenever durable Skill content or metadata changes. A Skill Version contains the canonical `SKILL.md` object pointer, attached Resource Manifest, descriptive metadata, optional frontmatter JSON, and a parent pointer to the previous version.
 _Avoid_: Semver release, public version pin, independent skill, diff-only patch
 
 **Skill Version History**:
@@ -61,15 +61,15 @@ An editable human label attached to a specific Skill Version. A label helps user
 _Avoid_: Tag, category tag, Skill Library tag, branch, semver requirement, globally unique release name
 
 **Resolved Skill**:
-The concrete content view produced by resolving a Skill Location at a point in time. A Resolved Skill includes `content` for the `SKILL.md` body, a resource manifest, resolved Skill Name, provenance, and access metadata.
+The concrete content view produced by resolving a Skill Location at a point in time. A Resolved Skill includes `content` for the `SKILL.md` body, attached Resource Manifest, resolved Skill Name, provenance, and access metadata.
 _Avoid_: Managed Skill, raw file, internal Skill Primary Key in public resolved output
 
 **Resource Manifest**:
-The complete list of `SKILL.md` and attached resources for a Managed Skill state or Skill Version, including paths and metadata needed to request each resource through Skillpack. A Resource Manifest has no independent product identity; its identity comes from the owning Managed Skill state or Skill Version. Structured Skill metadata remains canonical when `SKILL.md` frontmatter is present.
+The complete list of attached resources for a Managed Skill state or Skill Version, including paths and metadata needed to request each resource through Skillpack. The canonical `SKILL.md` file is stored as first-class Skill Version fields and is synthesized into delivery resource listings when an agent or UI browses Skill Files. A Resource Manifest has no independent product identity; its identity comes from the owning Managed Skill state or Skill Version. Structured Skill metadata remains canonical when `SKILL.md` frontmatter is present.
 _Avoid_: Cross-version resource state, resource content bundle, resource patch as storage model, independent resource version, R2 path as resource identity
 
 **Resource Path**:
-A safe relative path for a Resource Manifest item, resolved from the directory containing `SKILL.md` and following agent skills conventions. A Resource Path may include `/` for nested files, is unique within one Resource Manifest, and is not an origin repository path.
+A safe relative path for an attached Resource Manifest item or the canonical `SKILL.md` Skill File, resolved from the directory containing `SKILL.md` and following agent skills conventions. A Resource Path may include `/` for nested files, is unique within one Skill Version's attached manifest, and is not an origin repository path.
 _Avoid_: Absolute path, origin repo path, display label, cross-version resource identity
 
 **Skill File**:
