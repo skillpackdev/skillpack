@@ -92,22 +92,6 @@ export class SkillService {
     return this.repository.listSkillsWithCurrentResources();
   }
 
-  async resolveSkillManifestByName(name: string) {
-    const skill = await this.repository.findSkillByName(name);
-
-    if (!skill) {
-      throw skillErrors.skillNotFound();
-    }
-
-    return {
-      resources: await this.repository.listResourcesByVersionPk(
-        skill.headVersionPk,
-        skill.pk
-      ),
-      skill,
-    };
-  }
-
   async resolveSkill(skillPk: number): Promise<ResolvedSkillResult> {
     const skill = await this.repository.findSkillByPk(skillPk);
 

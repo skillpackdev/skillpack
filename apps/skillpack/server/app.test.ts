@@ -726,20 +726,13 @@ describe("app MCP auth", () => {
 
   it("returns a Skillpack activation payload from read_skill", async () => {
     const createdAt = new Date("2026-05-25T12:00:00.000Z");
-    const resolveSkillByName = vi.fn<SkillService["resolveSkillByName"]>();
-    const resolveSkillManifestByName = vi
-      .fn<SkillService["resolveSkillManifestByName"]>()
+    const readSkillTextFileByName =
+      vi.fn<SkillService["readSkillTextFileByName"]>();
+    const resolveSkillByName = vi
+      .fn<SkillService["resolveSkillByName"]>()
       .mockResolvedValue({
+        content: "---\nname: demo-skill\n---\n\n# Demo\n\nUse this.\n",
         resources: [
-          {
-            createdAt,
-            mediaType: "text/markdown",
-            path: "SKILL.md",
-            sha256: "skill-md",
-            size: 48,
-            skillPk: 42,
-            versionPk: 10,
-          },
           {
             createdAt,
             mediaType: "text/markdown",
@@ -769,23 +762,12 @@ describe("app MCP auth", () => {
           versionId: "version-current",
         },
       });
-    const readSkillTextFileByName = vi
-      .fn<SkillService["readSkillTextFileByName"]>()
-      .mockResolvedValue({
-        content: "---\nname: demo-skill\n---\n\n# Demo\n\nUse this.\n",
-        resource: {
-          mediaType: "text/markdown",
-          path: "SKILL.md",
-          sha256: "skill-md",
-          size: 49,
-        },
-      } as Awaited<ReturnType<SkillService["readSkillTextFileByName"]>>);
     const app = createApp({
       getSkillReadBearerUserId: vi
         .fn<VerifySkillReadBearerUserId>()
         .mockResolvedValue("user-oauth"),
       setSkillServicesForUser: setSkillServicesForUser(
-        { readSkillTextFileByName, resolveSkillManifestByName },
+        { readSkillTextFileByName, resolveSkillByName },
         []
       ),
     });
@@ -822,12 +804,8 @@ describe("app MCP auth", () => {
         type: "text",
       },
     ]);
-    expect(resolveSkillManifestByName).toHaveBeenCalledWith("demo-skill");
-    expect(resolveSkillByName).not.toHaveBeenCalled();
-    expect(readSkillTextFileByName).toHaveBeenCalledWith({
-      path: "SKILL.md",
-      skillName: "demo-skill",
-    });
+    expect(resolveSkillByName).toHaveBeenCalledWith("demo-skill");
+    expect(readSkillTextFileByName).not.toHaveBeenCalled();
   });
 
   it("rejects descendant SKILL.md resource URIs before service lookup", async () => {

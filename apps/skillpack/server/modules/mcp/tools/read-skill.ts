@@ -1,5 +1,4 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { skillContentPath } from "@server/constants";
 import { skillNameSchema } from "@skillpack/core/primitives";
 import { z } from "zod";
 
@@ -32,18 +31,13 @@ export const registerReadSkillTool = (
     readSkillToolDefinition,
     async (rawInput) => {
       const { name } = readSkillMcpSchema.parse(rawInput);
-      const resolvedSkill =
-        await context.skillService.resolveSkillManifestByName(name);
-      const skillFile = await context.skillService.readSkillTextFileByName({
-        path: skillContentPath,
-        skillName: name,
-      });
+      const resolvedSkill = await context.skillService.resolveSkillByName(name);
 
       return {
         content: [
           {
             text: formatSkillContent(
-              skillFile.content,
+              resolvedSkill.content,
               resolvedSkill.resources,
               name
             ),
