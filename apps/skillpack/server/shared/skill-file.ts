@@ -10,7 +10,7 @@ import { stringify as stringifyYaml } from "yaml";
 
 import { parseFrontmatter } from "./frontmatter";
 
-const knownFrontmatterKeys = new Set([
+export const skillFileFrontmatterKeys = new Set([
   "allowed-tools",
   "compatibility",
   "description",
@@ -65,6 +65,31 @@ const parseMetadata = (value: unknown) => {
 const optionalEntry = <T>(value: T | null | undefined) =>
   value === null || value === undefined || value === "" ? undefined : value;
 
+export const stripSkillFileFrontmatter = (
+  frontmatter?: Record<string, unknown> | null
+) =>
+  Object.fromEntries(
+    Object.entries(frontmatter ?? {}).filter(
+      ([key]) => !skillFileFrontmatterKeys.has(key)
+    )
+  );
+
+export const buildSkillFileFrontmatter = (
+  metadata: SkillFileMetadata,
+  baseFrontmatter?: Record<string, unknown> | null
+) =>
+  Object.fromEntries(
+    Object.entries({
+      ...stripSkillFileFrontmatter(baseFrontmatter),
+      "allowed-tools": optionalEntry(metadata.allowedTools),
+      compatibility: optionalEntry(metadata.compatibility),
+      description: metadata.description,
+      license: optionalEntry(metadata.license),
+      metadata: optionalEntry(metadata.metadata),
+      name: metadata.name,
+    }).filter(([, value]) => value !== undefined)
+  );
+
 export const parseSkillFile = (raw: string): ParsedSkillFile => {
   const { content, data } = parseFrontmatter(raw);
   const name = parseRequiredString(data.name, skillNameSchema);
@@ -100,20 +125,7 @@ export const serializeSkillFile = (
   body: string,
   baseFrontmatter?: Record<string, unknown>
 ) => {
-  const extraFrontmatter = Object.fromEntries(
-    Object.entries(baseFrontmatter ?? {}).filter(
-      ([key]) => !knownFrontmatterKeys.has(key)
-    )
-  );
-  const frontmatter = {
-    ...extraFrontmatter,
-    "allowed-tools": optionalEntry(metadata.allowedTools),
-    compatibility: optionalEntry(metadata.compatibility),
-    description: metadata.description,
-    license: optionalEntry(metadata.license),
-    metadata: optionalEntry(metadata.metadata),
-    name: metadata.name,
-  };
+  const frontmatter = buildSkillFileFrontmatter(metadata, baseFrontmatter);
 
   return `---\n${stringifyYaml(frontmatter).trimEnd()}\n---\n\n${body}`;
 };

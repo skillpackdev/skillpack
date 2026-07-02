@@ -1,26 +1,24 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { skillContentPath } from "@server/constants";
 import type { SkillRow } from "@server/modules/skills/types";
+import { buildSkillFileFrontmatter } from "@server/shared/skill-file";
 
 import { skillIndexUri, toSkillpackLocation } from "../locators";
 import type { SkillpackMcpContext } from "../types";
 
 const sha256Digest = (sha256: string) => `sha256:${sha256}`;
 
-const optionalFrontmatterEntry = (value: unknown) =>
-  value === null || value === undefined || value === "" ? undefined : value;
-
 const skillFrontmatter = (skill: SkillRow) =>
-  Object.fromEntries(
-    Object.entries({
-      ...skill.frontmatter,
-      "allowed-tools": optionalFrontmatterEntry(skill.allowedTools),
-      compatibility: optionalFrontmatterEntry(skill.compatibility),
+  buildSkillFileFrontmatter(
+    {
+      allowedTools: skill.allowedTools,
+      compatibility: skill.compatibility,
       description: skill.description,
-      license: optionalFrontmatterEntry(skill.license),
-      metadata: optionalFrontmatterEntry(skill.metadata),
+      license: skill.license,
+      metadata: skill.metadata,
       name: skill.name,
-    }).filter(([, value]) => value !== undefined)
+    },
+    skill.frontmatter
   );
 
 const skillIndexResourceDefinition = {

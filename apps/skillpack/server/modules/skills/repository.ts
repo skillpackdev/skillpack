@@ -4,38 +4,35 @@ import {
   skillVersionLabelsTable,
   skillVersionsTable,
 } from "@server/db/schema";
-import type { SkillFileMetadata } from "@server/shared/skill-file";
 import { markdownMediaType } from "@server/shared/text-resource";
 import type { Database } from "@server/types";
-import type { SkillOriginJson } from "@skillpack/contracts/skills/state";
 import { and, desc, eq as sqlEq, sql } from "drizzle-orm";
 
 import { skillErrors } from "./errors";
 import { createSkillVersionId, createSkillVersionLabelId } from "./ids";
 import type {
-  SkillFileResource,
-  SkillIdentityRow,
-  SkillResourceRow,
   SkillRow,
   SkillVersionFrontmatter,
   SkillVersionLabelResult,
-  SkillVersionRow,
-  SkillWithCurrentAttachedResources,
   SkillWithCurrentResource,
   SkillWithCurrentResources,
   SkillWithCurrentState,
   StoredResourceObject,
 } from "./types";
-
-interface SkillOriginInput {
-  kind: "github";
-  metadata: Record<string, unknown> | null;
-  url: string;
-}
-
-interface SkillFileStateInput extends Omit<SkillFileMetadata, "name"> {
-  frontmatter: Record<string, unknown>;
-}
+import type { SkillFileStateInput, SkillOriginInput } from "./version-state";
+import {
+  findManifestResource,
+  findResourceInCurrentVersion,
+  toOriginJson,
+  toResourceRows,
+  toSkillFileResource,
+  toSkillRow,
+  toSkillWithCurrentAttachedResources,
+  toStoredResource,
+  toVersionFrontmatter,
+  versionStateSelection,
+  versionWithManifestSelection,
+} from "./version-state";
 
 interface CreateSkillInput {
   name: string;
@@ -63,190 +60,12 @@ interface AppendSkillVersionInput {
   skillName: string;
 }
 
-type SkillVersionStateRow = Omit<SkillVersionRow, "resourceManifest">;
-
 const currentVersionSelector = "current";
-
-const versionStateSelection = {
-  createdAt: skillVersionsTable.createdAt,
-  description: skillVersionsTable.description,
-  frontmatter: skillVersionsTable.frontmatter,
-  id: skillVersionsTable.id,
-  parentPk: skillVersionsTable.parentPk,
-  pk: skillVersionsTable.pk,
-  skillFileSha256: skillVersionsTable.skillFileSha256,
-  skillFileSize: skillVersionsTable.skillFileSize,
-  skillPk: skillVersionsTable.skillPk,
-};
-
-const versionWithManifestSelection = {
-  ...versionStateSelection,
-  resourceManifest: skillVersionsTable.resourceManifest,
-};
-
-const managedFrontmatterKeys = new Set([
-  "allowed-tools",
-  "compatibility",
-  "description",
-  "license",
-  "metadata",
-  "name",
-]);
-
 const isUniqueConstraintError = (error: unknown): error is Error =>
   error instanceof Error && error.message.includes("UNIQUE constraint failed");
 
 const isUniqueSkillNameError = (error: unknown) =>
   isUniqueConstraintError(error) && error.message.includes("skills");
-
-const toOriginJson = (
-  origin?: SkillOriginInput | SkillOriginJson | null
-): SkillOriginJson | null =>
-  origin
-    ? {
-        kind: origin.kind,
-        metadata: origin.metadata,
-        url: origin.url,
-      }
-    : null;
-
-const optionalString = (value: unknown) =>
-  typeof value === "string" && value.length > 0 ? value : null;
-
-const optionalStringRecord = (value: unknown) => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return null;
-  }
-
-  const entries = Object.entries(value).filter(
-    (entry): entry is [string, string] => typeof entry[1] === "string"
-  );
-
-  return entries.length === Object.keys(value).length
-    ? Object.fromEntries(entries)
-    : null;
-};
-
-const toVersionFrontmatter = (
-  metadata: SkillFileStateInput
-): SkillVersionFrontmatter | null => {
-  const frontmatter = Object.fromEntries(
-    Object.entries(metadata.frontmatter).filter(
-      ([key]) => !managedFrontmatterKeys.has(key)
-    )
-  ) as SkillVersionFrontmatter;
-
-  if (metadata.allowedTools) {
-    frontmatter["allowed-tools"] = metadata.allowedTools;
-  }
-  if (metadata.compatibility) {
-    frontmatter.compatibility = metadata.compatibility;
-  }
-  if (metadata.license) {
-    frontmatter.license = metadata.license;
-  }
-  if (metadata.metadata) {
-    frontmatter.metadata = metadata.metadata;
-  }
-
-  return Object.keys(frontmatter).length > 0 ? frontmatter : null;
-};
-
-const toSkillRow = (
-  skill: SkillIdentityRow,
-  version: SkillVersionStateRow
-): SkillRow => {
-  const frontmatter = version.frontmatter ?? {};
-
-  return {
-    ...skill,
-    allowedTools: optionalString(frontmatter["allowed-tools"]),
-    compatibility: optionalString(frontmatter.compatibility),
-    description: version.description,
-    frontmatter: version.frontmatter,
-    headVersionPk: version.pk,
-    license: optionalString(frontmatter.license),
-    metadata: optionalStringRecord(frontmatter.metadata),
-    origin: skill.origin,
-    skillFileSha256: version.skillFileSha256,
-    skillFileSize: version.skillFileSize,
-    versionId: version.id,
-  };
-};
-
-const toSkillFileResource = (
-  skill: SkillRow | { pk: number },
-  version: SkillVersionStateRow
-): SkillResourceRow => ({
-  mediaType: markdownMediaType,
-  path: skillContentPath,
-  sha256: version.skillFileSha256,
-  size: version.skillFileSize,
-  skillPk: skill.pk,
-  versionPk: version.pk,
-});
-
-const toStoredResource = (
-  resource: StoredResourceObject
-): StoredResourceObject => ({
-  mediaType: resource.mediaType,
-  path: resource.path,
-  sha256: resource.sha256,
-  size: resource.size,
-});
-
-const toResourceRows = (
-  resources: StoredResourceObject[],
-  skillPk: number,
-  versionPk: number
-): SkillResourceRow[] =>
-  resources.map((resource) => ({
-    ...resource,
-    skillPk,
-    versionPk,
-  }));
-
-const findManifestResource = (
-  version: SkillVersionRow,
-  path: string,
-  skillPk: number
-) => {
-  const resource = version.resourceManifest.find((item) => item.path === path);
-
-  return resource ? { ...resource, skillPk, versionPk: version.pk } : undefined;
-};
-
-const toSkillFileReadResource = (skill: SkillRow): SkillFileResource => ({
-  mediaType: markdownMediaType,
-  path: skillContentPath,
-  sha256: skill.skillFileSha256,
-  size: skill.skillFileSize,
-});
-
-const findResourceInCurrentVersion = (
-  row: { skill: SkillIdentityRow; version: SkillVersionRow },
-  path: string
-) => {
-  const skill = toSkillRow(row.skill, row.version);
-
-  if (path === skillContentPath) {
-    return toSkillFileReadResource(skill);
-  }
-
-  return findManifestResource(row.version, path, row.skill.pk);
-};
-
-const toSkillWithCurrentAttachedResources = (row: {
-  skill: SkillIdentityRow;
-  version: SkillVersionRow;
-}): SkillWithCurrentAttachedResources => ({
-  resources: toResourceRows(
-    row.version.resourceManifest,
-    row.skill.pk,
-    row.version.pk
-  ),
-  skill: toSkillRow(row.skill, row.version),
-});
 
 export class SkillRepository {
   private readonly db: Database;
