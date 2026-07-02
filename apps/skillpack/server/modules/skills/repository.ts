@@ -62,7 +62,26 @@ interface AppendSkillVersionInput {
   skillName: string;
 }
 
+type SkillVersionStateRow = Omit<SkillVersionRow, "resourceManifest">;
+
 const currentVersionSelector = "current";
+
+const versionStateSelection = {
+  createdAt: skillVersionsTable.createdAt,
+  description: skillVersionsTable.description,
+  frontmatter: skillVersionsTable.frontmatter,
+  id: skillVersionsTable.id,
+  parentPk: skillVersionsTable.parentPk,
+  pk: skillVersionsTable.pk,
+  skillFileSha256: skillVersionsTable.skillFileSha256,
+  skillFileSize: skillVersionsTable.skillFileSize,
+  skillPk: skillVersionsTable.skillPk,
+};
+
+const versionWithManifestSelection = {
+  ...versionStateSelection,
+  resourceManifest: skillVersionsTable.resourceManifest,
+};
 
 const managedFrontmatterKeys = new Set([
   "allowed-tools",
@@ -134,7 +153,7 @@ const toVersionFrontmatter = (
 
 const toSkillRow = (
   skill: SkillIdentityRow,
-  version: SkillVersionRow
+  version: SkillVersionStateRow
 ): SkillRow => {
   const frontmatter = version.frontmatter ?? {};
 
@@ -156,7 +175,7 @@ const toSkillRow = (
 
 const toSkillFileResource = (
   skill: SkillRow | { pk: number },
-  version: SkillVersionRow
+  version: SkillVersionStateRow
 ): SkillResourceRow => ({
   mediaType: markdownMediaType,
   path: skillContentPath,
@@ -228,7 +247,7 @@ export class SkillRepository {
 
   async listSkills(): Promise<SkillWithCurrentState[]> {
     const rows = await this.db
-      .select({ skill: skillsTable, version: skillVersionsTable })
+      .select({ skill: skillsTable, version: versionStateSelection })
       .from(skillsTable)
       .innerJoin(
         skillVersionsTable,
@@ -250,7 +269,7 @@ export class SkillRepository {
     }
 
     const rows = await this.db
-      .select({ skill: skillsTable, version: skillVersionsTable })
+      .select({ skill: skillsTable, version: versionStateSelection })
       .from(skillsTable)
       .innerJoin(
         skillVersionsTable,
@@ -267,7 +286,7 @@ export class SkillRepository {
 
   async listSkillsWithCurrentResources(): Promise<SkillWithCurrentResources[]> {
     const rows = await this.db
-      .select({ skill: skillsTable, version: skillVersionsTable })
+      .select({ skill: skillsTable, version: versionWithManifestSelection })
       .from(skillsTable)
       .innerJoin(
         skillVersionsTable,
