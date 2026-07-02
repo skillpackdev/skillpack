@@ -43,7 +43,7 @@ export class ResourceManifest {
     this.storage = storage;
   }
 
-  async createSnapshot(
+  async storeManifest(
     resources: TextResourceInput[]
   ): Promise<StoredResourceObject[]> {
     validateResourcePaths(resources);
@@ -65,7 +65,7 @@ export class ResourceManifest {
     });
   }
 
-  async patchSnapshot(
+  async patchManifest(
     currentResources: SkillResourceRow[],
     input: PatchSkillServiceInput
   ): Promise<StoredResourceObject[]> {
@@ -95,13 +95,7 @@ export class ResourceManifest {
     return [...nextResources.values()];
   }
 
-  static restoreSnapshot(
-    resources: SkillResourceRow[]
-  ): StoredResourceObject[] {
-    return resources.map(toStoredResource);
-  }
-
-  static resolveSnapshot(
+  static resolveManifest(
     resources: SkillResourceRow[]
   ): ResolvedResourceManifest {
     return { resources };

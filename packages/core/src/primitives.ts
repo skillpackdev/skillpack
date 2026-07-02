@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 export const skillIdSchema = z.coerce.number().int().positive();
-export const skillSnapshotNumberSchema = z.coerce.number().int().positive();
 
 const skillNamePattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 const hasLowercaseLetterPattern = /[a-z]/u;
@@ -20,17 +19,10 @@ export const skillCompatibilitySchema = z.string().min(1).max(500);
 export const skillLicenseSchema = z.string().min(1).max(500);
 export const skillAllowedToolsSchema = z.string().min(1).max(1000);
 export const skillMetadataSchema = z.record(z.string().min(1), z.string());
-export const skillSnapshotLabelSchema = z.string().min(1).max(80);
-export const skillSnapshotNoteSchema = z.string().min(1).max(500);
-
 export const optionalSkillAllowedToolsSchema =
   skillAllowedToolsSchema.optional();
 export const optionalSkillCompatibilitySchema =
   skillCompatibilitySchema.optional();
-export const optionalSkillSnapshotLabelSchema =
-  skillSnapshotLabelSchema.optional();
-export const optionalSkillSnapshotNoteSchema =
-  skillSnapshotNoteSchema.optional();
 export const optionalSkillLicenseSchema = skillLicenseSchema.optional();
 
 const isSafeRelativePath = (path: string) =>

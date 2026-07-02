@@ -128,8 +128,8 @@ export class SkillService {
       throw skillErrors.skillNotFound();
     }
 
-    const manifest = ResourceManifest.resolveSnapshot(state.resources);
-    const skillFile = await this.readSkillFileSnapshot(state.skill);
+    const manifest = ResourceManifest.resolveManifest(state.resources);
+    const skillFile = await this.readSkillFileForRow(state.skill);
 
     return {
       resources: manifest.resources,
@@ -141,8 +141,8 @@ export class SkillService {
   private async resolveSkillState(
     state: SkillWithCurrentAttachedResources
   ): Promise<ResolvedSkillResult> {
-    const manifest = ResourceManifest.resolveSnapshot(state.resources);
-    const skillFile = await this.readSkillFileSnapshot(state.skill);
+    const manifest = ResourceManifest.resolveManifest(state.resources);
+    const skillFile = await this.readSkillFileForRow(state.skill);
 
     return {
       content: skillFile.body,
@@ -221,8 +221,8 @@ export class SkillService {
         input.skillName,
         input.versionId
       );
-    const manifest = ResourceManifest.resolveSnapshot(resources);
-    const skillFile = await this.readSkillFileSnapshot(skill);
+    const manifest = ResourceManifest.resolveManifest(resources);
+    const skillFile = await this.readSkillFileForRow(skill);
 
     return {
       content: skillFile.body,
@@ -289,7 +289,7 @@ export class SkillService {
     const parsedSkillFile = parseSkillFile(skillFileContent);
     const skillFile =
       await this.resourceManifest.storeSkillFile(skillFileContent);
-    const resourceManifest = await this.resourceManifest.createSnapshot(
+    const resourceManifest = await this.resourceManifest.storeManifest(
       input.resources
     );
 
@@ -371,7 +371,7 @@ export class SkillService {
             size: skill.skillFileSize,
           },
         };
-    const resources = await this.resourceManifest.patchSnapshot(
+    const resources = await this.resourceManifest.patchManifest(
       currentResources,
       input
     );
@@ -406,7 +406,7 @@ export class SkillService {
     metadata: SkillFileMetadata,
     input: PatchSkillServiceInput
   ) {
-    const currentSkillFile = await this.readSkillFileSnapshot(skill);
+    const currentSkillFile = await this.readSkillFileForRow(skill);
     const skillFileContent = serializeSkillFile(
       metadata,
       input.content ?? currentSkillFile.body,
@@ -493,7 +493,7 @@ export class SkillService {
     const skillFile = await this.resourceManifest.storeSkillFile(
       definition.content
     );
-    const resources = await this.resourceManifest.createSnapshot(
+    const resources = await this.resourceManifest.storeManifest(
       definition.resources
     );
     const origin = {
@@ -538,7 +538,7 @@ export class SkillService {
     return this.resolveSkill(skill.pk);
   }
 
-  private async readSkillFileSnapshot(skill: SkillRow) {
+  private async readSkillFileForRow(skill: SkillRow) {
     const object = await this.resourceManifest.getObjectBySha256(
       skill.skillFileSha256
     );

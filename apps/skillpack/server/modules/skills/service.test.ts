@@ -122,10 +122,10 @@ const createService = () => {
     upsertVersionLabel: vi.fn<SkillRepository["upsertVersionLabel"]>(),
   };
   const resourceManifest = {
-    createSnapshot: vi.fn<ResourceManifest["createSnapshot"]>(),
     getObjectBySha256: vi.fn<ResourceManifest["getObjectBySha256"]>(),
     getResourceObject: vi.fn<ResourceManifest["getResourceObject"]>(),
-    patchSnapshot: vi.fn<ResourceManifest["patchSnapshot"]>(),
+    patchManifest: vi.fn<ResourceManifest["patchManifest"]>(),
+    storeManifest: vi.fn<ResourceManifest["storeManifest"]>(),
     storeSkillFile: vi.fn<ResourceManifest["storeSkillFile"]>(),
   };
   const originService = {
@@ -214,7 +214,7 @@ describe("SkillService current-state lifecycle", () => {
       sha256: "skill-md",
       size: 120,
     });
-    resourceManifest.createSnapshot.mockResolvedValue(manifest);
+    resourceManifest.storeManifest.mockResolvedValue(manifest);
     repository.findSkillWithCurrentAttachedResourcesByPk.mockResolvedValue(
       currentState({ skill })
     );
@@ -278,7 +278,7 @@ describe("SkillService current-state lifecycle", () => {
       sha256: "next-skill-md",
       size: 140,
     });
-    resourceManifest.patchSnapshot.mockResolvedValue(nextResources);
+    resourceManifest.patchManifest.mockResolvedValue(nextResources);
     repository.updateSkillState.mockResolvedValue(
       skillRow({ description: "Next description" })
     );
@@ -326,7 +326,7 @@ describe("SkillService current-state lifecycle", () => {
     repository.findSkillWithCurrentAttachedResourcesByPk.mockResolvedValue(
       currentState({ resources: currentResources, skill: currentSkill })
     );
-    resourceManifest.patchSnapshot.mockResolvedValue(nextResources);
+    resourceManifest.patchManifest.mockResolvedValue(nextResources);
     repository.updateSkillState.mockResolvedValue(currentSkill);
 
     await service.patchSkill(currentSkill.pk, {
@@ -504,7 +504,7 @@ describe("SkillService current-state lifecycle", () => {
     resourceManifest.storeSkillFile.mockResolvedValue(
       storedResource({ path: "SKILL.md" })
     );
-    resourceManifest.createSnapshot.mockResolvedValue([]);
+    resourceManifest.storeManifest.mockResolvedValue([]);
     repository.updateSkillState.mockResolvedValue(existingSkill);
     repository.findSkillWithCurrentAttachedResourcesByPk.mockResolvedValue(
       currentState({ skill: existingSkill })
