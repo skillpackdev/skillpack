@@ -19,21 +19,97 @@ const skillpackLocationPattern =
   /^skill:\/\/skillpack\/(?<skillName>[a-z0-9]+(?:-[a-z0-9]+)*)$/u;
 
 const mcpSkillResourceSchema = z.object({
-  content: z.string(),
-  mediaType: z.string().min(1).optional(),
-  path: safeRelativePathSchema,
+  content: z
+    .string()
+    .describe("UTF-8 text content to store for this resource."),
+  mediaType: z
+    .string()
+    .min(1)
+    .describe(
+      "MIME type for this resource. Omit to infer from the file extension."
+    )
+    .optional(),
+  path: safeRelativePathSchema.describe(
+    "Safe relative resource path such as references/notes.md. SKILL.md is reserved for the main skill file."
+  ),
+});
+
+const createSkillMcpSchema = z.object({
+  allowedTools: createSkillSchema.shape.allowedTools.describe(
+    "Optional advisory tool permissions for the skill, serialized as allowed-tools frontmatter."
+  ),
+  compatibility: createSkillSchema.shape.compatibility.describe(
+    "Optional compatibility note, such as supported agents, runtimes, or project types."
+  ),
+  content: createSkillSchema.shape.content.describe(
+    "Markdown instruction body for the generated SKILL.md. Provide the body without YAML frontmatter."
+  ),
+  description: createSkillSchema.shape.description.describe(
+    "Short human-readable summary shown in catalogs and tool results."
+  ),
+  license: createSkillSchema.shape.license.describe(
+    "Optional license or usage terms for this skill."
+  ),
+  metadata: createSkillSchema.shape.metadata.describe(
+    "Optional string key/value metadata serialized into SKILL.md frontmatter."
+  ),
+  name: createSkillSchema.shape.name.describe(
+    "Unique Skill Name for this user. Use lowercase letters, numbers, and hyphens, e.g. code-reviewer."
+  ),
+  resources: z
+    .array(mcpSkillResourceSchema)
+    .default([])
+    .describe(
+      "Additional text resources to attach to the skill, such as references, examples, or scripts."
+    ),
 });
 
 const updateSkillMcpSchema = z.object({
-  allowedTools: createSkillSchema.shape.allowedTools.optional(),
-  compatibility: createSkillSchema.shape.compatibility.optional(),
-  deleteResourcePaths: z.array(safeRelativePathSchema).default([]),
-  description: createSkillSchema.shape.description.optional(),
-  license: createSkillSchema.shape.license.optional(),
-  metadata: createSkillSchema.shape.metadata,
-  name: skillNameSchema.optional(),
-  skillName: skillNameSchema.describe("Skill Name to update."),
-  upsertResources: z.array(mcpSkillResourceSchema).default([]),
+  allowedTools: createSkillSchema.shape.allowedTools
+    .describe(
+      "New advisory tool permissions. Omit to keep the current value; pass null to clear it."
+    )
+    .optional(),
+  compatibility: createSkillSchema.shape.compatibility
+    .describe(
+      "New compatibility note. Omit to keep the current value; pass null to clear it."
+    )
+    .optional(),
+  deleteResourcePaths: z
+    .array(safeRelativePathSchema)
+    .default([])
+    .describe("Attached resource paths to remove from the next skill version."),
+  description: createSkillSchema.shape.description
+    .describe("New catalog description. Omit to keep the current description.")
+    .optional(),
+  license: createSkillSchema.shape.license
+    .describe(
+      "New license or usage terms. Omit to keep the current value; pass null to clear it."
+    )
+    .optional(),
+  metadata: createSkillSchema.shape.metadata.describe(
+    "New string key/value metadata. Omit to keep the current metadata; pass null to clear it."
+  ),
+  name: skillNameSchema
+    .describe(
+      "New Skill Name. Renames the Skillpack location to skill://skillpack/{name}."
+    )
+    .optional(),
+  skillName: skillNameSchema.describe(
+    "Current Skill Name to patch. Use the name segment from skill://skillpack/{skillName}."
+  ),
+  upsertResources: z
+    .array(
+      mcpSkillResourceSchema.extend({
+        path: safeRelativePathSchema.describe(
+          "Safe relative resource path to add or replace. Use SKILL.md to submit a complete skill file whose frontmatter updates metadata and whose body updates skill content."
+        ),
+      })
+    )
+    .default([])
+    .describe(
+      "Text resources to add or replace in the next skill version. Other existing resources stay unchanged."
+    ),
 });
 
 const escapeXml = (value: string) =>
@@ -69,6 +145,7 @@ const formatSkillMutationResult = (skill: {
     },
   ],
 });
+
 const parseSkillpackLocation = (location: string) => {
   const match = skillpackLocationPattern.exec(location);
 
@@ -147,33 +224,15 @@ const toPatchSkillInput = (input: UpdateSkillMcpInput) => {
   };
 };
 
-const formatSkillpackCatalog = (
-  skills: {
-    description: string;
-    name: string;
-  }[]
-) => {
-  const lines = [
-    "The following Skillpack Managed Skills are available through Skill Delivery.",
-    "When a task matches a Skillpack skill, call read_skill with its skill:// location.",
-    "Use read_skill with a resource path to read attached references, scripts, and assets.",
-    "",
-    "<skillpack_skills>",
-  ];
-
-  for (const skill of skills) {
-    lines.push("  <skill>");
-    lines.push(`    <name>${escapeXml(skill.name)}</name>`);
-    lines.push(
-      `    <description>${escapeXml(skill.description)}</description>`
-    );
-    lines.push(`    <location>${toSkillpackLocation(skill.name)}</location>`);
-    lines.push("  </skill>");
-  }
-
-  lines.push("</skillpack_skills>");
-  return lines.join("\n");
-};
+const skillpackMcpInstructions = [
+  "Use this server to find and load skills hosted by Skillpack, a remote Agent Skills management system.",
+  "At the start of each new user task, call list_skills once. Select relevant skills by matching the task to skill names and descriptions.",
+  "For each relevant skill, call read_skill with its skill:// location before planning, editing files, running commands, or calling task-specific tools. Treat the returned SKILL.md as active task guidance for this task.",
+  "When a loaded SKILL.md references attached files, call read_skill again with the resource path to load the needed reference, script, example, or asset.",
+  "When the user provides a skill:// location, call read_skill for that location.",
+  "Use create_skill and update_skill when the user asks to create, improve, or maintain Skillpack skills. Read the existing skill before update_skill. In updates, omitted fields and resources remain unchanged; deleteResourcePaths removes attachments; upsertResources adds or replaces attachments.",
+  "Resolve skill:// URIs through Skillpack MCP tools or resources.",
+].join(" ");
 
 const createMcpServer = (c: Context<AppBindings>) => {
   const server = new McpServer(
@@ -182,16 +241,19 @@ const createMcpServer = (c: Context<AppBindings>) => {
       version: "0.1.0",
     },
     {
-      instructions:
-        "Use Skillpack MCP tools and resources to read, create, and update authenticated Managed Skills. Updates are patch-based, so agents can safely iterate by writing a better next version. Do not treat skill:// locations as filesystem paths.",
+      instructions: skillpackMcpInstructions,
     }
   );
 
   server.registerTool(
     "list_skills",
     {
+      annotations: {
+        openWorldHint: false,
+        readOnlyHint: true,
+      },
       description:
-        "List Skillpack Managed Skills available to the authenticated user.",
+        "Lists the authenticated user's Managed Skills with Skill Name, description, and skill:// location. Use this first to discover exact names and locations before reading or updating a skill.",
       title: "List Skillpack Skills",
     },
     async () => {
@@ -220,9 +282,14 @@ const createMcpServer = (c: Context<AppBindings>) => {
   server.registerTool(
     "create_skill",
     {
+      annotations: {
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: false,
+      },
       description:
-        "Create a Skillpack Managed Skill in the authenticated user's library.",
-      inputSchema: createSkillSchema.shape,
+        "Creates a new Skillpack Managed Skill for the authenticated user. Use for a new unique Skill Name. Provide the SKILL.md markdown body in content; Skillpack serializes name, description, and optional metadata into frontmatter automatically. Use resources for additional text files.",
+      inputSchema: createSkillMcpSchema.shape,
       title: "Create Skillpack Skill",
     },
     async (input) => {
@@ -239,8 +306,13 @@ const createMcpServer = (c: Context<AppBindings>) => {
   server.registerTool(
     "update_skill",
     {
+      annotations: {
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: false,
+      },
       description:
-        "Patch a Skillpack Managed Skill. Each successful update appends a recoverable version node and moves the skill head.",
+        "Patches an existing Skillpack Managed Skill by current Skill Name. Each successful update appends a recoverable version node and moves the skill head. Call read_skill first when editing existing content. Omitted fields stay unchanged. Use upsertResources to add or replace text resources, deleteResourcePaths to remove attachments, and upsertResources with path SKILL.md to submit a complete SKILL.md whose frontmatter updates metadata and whose body updates skill content.",
       inputSchema: updateSkillMcpSchema.shape,
       title: "Update Skillpack Skill",
     },
@@ -262,14 +334,20 @@ const createMcpServer = (c: Context<AppBindings>) => {
   server.registerTool(
     "read_skill",
     {
+      annotations: {
+        openWorldHint: false,
+        readOnlyHint: true,
+      },
       description:
-        "Read a Skillpack skill or one attached resource from a skill:// location.",
+        "Reads the current SKILL.md for a Skillpack Managed Skill, or reads one attached text resource when path is provided. Use location values returned by list_skills, such as skill://skillpack/demo-skill. Reading SKILL.md returns a <skill> wrapper with the skill file plus a <resources> manifest of attached resources.",
       inputSchema: {
         location: z
           .string()
-          .describe("Skillpack location like skill://skillpack/demo-skill"),
+          .describe("Skillpack location such as skill://skillpack/demo-skill."),
         path: safeRelativePathSchema
-          .describe("Safe relative resource path. Omit to read SKILL.md.")
+          .describe(
+            "Attached resource path from the <resources> manifest. Omit or pass SKILL.md to read the main skill file."
+          )
           .optional(),
       },
       title: "Read Skillpack Skill",
@@ -311,7 +389,7 @@ const createMcpServer = (c: Context<AppBindings>) => {
   );
 
   server.registerResource(
-    "skillpack_skill",
+    "skill",
     new ResourceTemplate("skill://skillpack/{skillName}", {
       list: async () => {
         const skills = await c.var.skillService.listSkills();
@@ -351,7 +429,8 @@ const createMcpServer = (c: Context<AppBindings>) => {
       },
     }),
     {
-      description: "Skillpack Managed Skill instructions.",
+      description:
+        "Current SKILL.md instructions for a Skillpack Managed Skill, addressed by skill://skillpack/{skillName}.",
       title: "Skillpack Skill",
     },
     async (uri) => {
@@ -379,7 +458,8 @@ const createMcpServer = (c: Context<AppBindings>) => {
       list: undefined,
     }),
     {
-      description: "Skillpack Managed Skill attached resource.",
+      description:
+        "Attached text resource for a Skillpack Managed Skill, addressed by skillpack-resource://skillpack/{skillName}?path={path}.",
       title: "Skillpack Resource",
     },
     async (uri) => {
@@ -392,35 +472,6 @@ const createMcpServer = (c: Context<AppBindings>) => {
             mimeType: result.resource.mediaType,
             text: result.content,
             uri: uri.toString(),
-          },
-        ],
-      };
-    }
-  );
-
-  server.registerPrompt(
-    "use_skillpack_skills",
-    {
-      description:
-        "Guide an agent to discover and read Skillpack Managed Skills.",
-      title: "Use Skillpack Skills",
-    },
-    async () => {
-      const skills = await c.var.skillService.listSkills();
-
-      return {
-        messages: [
-          {
-            content: {
-              text: formatSkillpackCatalog(
-                skills.map(({ skill }) => ({
-                  description: skill.description,
-                  name: skill.name,
-                }))
-              ),
-              type: "text",
-            },
-            role: "user",
           },
         ],
       };

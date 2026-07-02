@@ -38,8 +38,7 @@ For v1:
 - the MCP server exposes:
   - `skillpack_list`;
   - `skillpack_read`;
-  - MCP resources for current Skills and attached resources;
-  - `use_skillpack_skills` prompt guidance.
+  - MCP resources for current Skills and attached resources.
 
 The Worker static asset configuration must run the Worker first for `/mcp` so
 the SPA fallback cannot intercept MCP requests.
@@ -92,6 +91,6 @@ Workers.
 - [x] `/mcp` returns an OAuth Bearer challenge without auth.
 - [x] valid `skills:read` Bearer tokens can initialize MCP.
 - [x] unexpected browser origins are rejected before token verification.
-- [x] `tools/list`, `tools/call`, `resources/list`, `resources/read`,
-      `prompts/list`, and `prompts/get` are covered by tests.
+- [x] `tools/list`, `tools/call`, `resources/list`, and `resources/read` are
+      covered by tests.
 - [x] existing REST skill read/write auth behavior remains covered.

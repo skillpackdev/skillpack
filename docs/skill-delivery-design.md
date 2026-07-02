@@ -71,7 +71,6 @@ MCP capabilities:
 - `skillpack_list` lists the authenticated user's Managed Skill catalog.
 - `skillpack_read` reads `skill://skillpack/{skillName}` locations and attached resource paths.
 - MCP resources expose current Skills and attached resources for clients that prefer resource discovery.
-- `use_skillpack_skills` provides agent prompt guidance.
 
 The endpoint is stateless in v1 and uses request/response JSON over `@hono/mcp` Streamable HTTP transport.
 
