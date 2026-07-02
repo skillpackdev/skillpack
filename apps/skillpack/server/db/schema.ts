@@ -14,6 +14,7 @@ export const skillsTable = sqliteTable(
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     headVersionPk: integer("head_version_pk").notNull(),
     name: text("name").notNull(),
+    origin: text("origin", { mode: "json" }).$type<SkillOriginJson | null>(),
     ownerUserId: text("owner_user_id").notNull(),
     pk: integer("pk").primaryKey({ autoIncrement: true }),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
@@ -26,22 +27,37 @@ export const skillsTable = sqliteTable(
   })
 );
 
+export interface SkillVersionFrontmatterJson {
+  "allowed-tools"?: string | null;
+  compatibility?: string | null;
+  license?: string | null;
+  metadata?: Record<string, string> | null;
+  [key: string]: unknown;
+}
+
+export interface SkillResourceManifestItemJson {
+  mediaType: string;
+  path: string;
+  sha256: string;
+  size: number;
+}
+
 export const skillVersionsTable = sqliteTable(
   "skill_versions",
   {
-    allowedTools: text("allowed_tools"),
-    compatibility: text("compatibility"),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     description: text("description").notNull(),
+    frontmatter: text("frontmatter", {
+      mode: "json",
+    }).$type<SkillVersionFrontmatterJson | null>(),
     id: text("id").notNull(),
-    license: text("license"),
-    metadata: text("metadata", { mode: "json" }).$type<Record<
-      string,
-      string
-    > | null>(),
-    origin: text("origin", { mode: "json" }).$type<SkillOriginJson | null>(),
     parentPk: integer("parent_pk"),
     pk: integer("pk").primaryKey({ autoIncrement: true }),
+    resourceManifest: text("resource_manifest", { mode: "json" })
+      .$type<SkillResourceManifestItemJson[]>()
+      .notNull(),
+    skillFileSha256: text("skill_file_sha256").notNull(),
+    skillFileSize: integer("skill_file_size").notNull(),
     skillPk: integer("skill_pk").notNull(),
   },
   (table) => ({
@@ -50,29 +66,6 @@ export const skillVersionsTable = sqliteTable(
       table.parentPk
     ),
     skillVersionSkillIndex: index("skill_versions_skill_idx").on(table.skillPk),
-  })
-);
-
-export const skillVersionResourcesTable = sqliteTable(
-  "skill_version_resources",
-  {
-    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
-    mediaType: text("media_type").notNull(),
-    path: text("path").notNull(),
-    sha256: text("sha256").notNull(),
-    size: integer("size").notNull(),
-    versionPk: integer("version_pk").notNull(),
-  },
-  (table) => ({
-    skillVersionResourceShaIndex: index("skill_version_resources_sha_idx").on(
-      table.sha256
-    ),
-    skillVersionResourceVersionIndex: index(
-      "skill_version_resources_version_idx"
-    ).on(table.versionPk),
-    skillVersionResourceVersionPathUnique: uniqueIndex(
-      "skill_version_resources_version_path_unique"
-    ).on(table.versionPk, table.path),
   })
 );
 
@@ -111,25 +104,14 @@ export const skillsRelations = relations(skillsTable, ({ many, one }) => ({
 
 export const skillVersionsRelations = relations(
   skillVersionsTable,
-  ({ many, one }) => ({
+  ({ one }) => ({
     label: one(skillVersionLabelsTable, {
       fields: [skillVersionsTable.pk],
       references: [skillVersionLabelsTable.versionPk],
     }),
-    resources: many(skillVersionResourcesTable),
     skill: one(skillsTable, {
       fields: [skillVersionsTable.skillPk],
       references: [skillsTable.pk],
-    }),
-  })
-);
-
-export const skillVersionResourcesRelations = relations(
-  skillVersionResourcesTable,
-  ({ one }) => ({
-    version: one(skillVersionsTable, {
-      fields: [skillVersionResourcesTable.versionPk],
-      references: [skillVersionsTable.pk],
     }),
   })
 );

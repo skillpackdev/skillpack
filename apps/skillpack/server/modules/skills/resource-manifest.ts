@@ -107,7 +107,7 @@ export class ResourceManifest {
     return { resources };
   }
 
-  getResourceObject(resource: SkillResourceRow) {
+  getResourceObject(resource: { sha256: string }) {
     return this.getObjectBySha256(resource.sha256);
   }
 

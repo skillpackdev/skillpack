@@ -1,4 +1,3 @@
-import { skillContentPath } from "@server/constants";
 import type { OriginService } from "@server/modules/origins/service";
 import type { OriginSkillDefinition } from "@server/modules/origins/types";
 import type { SkillFileMetadata } from "@server/shared/skill-file";
@@ -18,7 +17,6 @@ import type {
   ReadSkillFileResult,
   ReadSkillTextFileResult,
   ResolvedSkillResult,
-  SkillResourceRow,
   SkillRow,
   SkillVersionHistoryResult,
   SkillVersionLabelResult,
@@ -135,10 +133,7 @@ export class SkillService {
   ): Promise<ResolvedSkillResult> {
     const resources = await this.repository.listResourcesBySkillPk(skill.pk);
     const manifest = ResourceManifest.resolveSnapshot(resources);
-    const skillFile = await this.readCurrentSkillFile(
-      skill,
-      manifest.resources
-    );
+    const skillFile = await this.readCurrentSkillFile(skill);
 
     return {
       content: skillFile.body,
@@ -222,10 +217,7 @@ export class SkillService {
         input.versionId
       );
     const manifest = ResourceManifest.resolveSnapshot(resources);
-    const skillFile = await this.readCurrentSkillFile(
-      skill,
-      manifest.resources
-    );
+    const skillFile = await this.readCurrentSkillFile(skill);
 
     return {
       content: skillFile.body,
@@ -289,18 +281,22 @@ export class SkillService {
   async createSkill(input: CreateSkillServiceInput) {
     const now = new Date();
     const skillFileContent = serializeSkillFile(input, input.content);
+    const parsedSkillFile = parseSkillFile(skillFileContent);
     const skillFile =
       await this.resourceManifest.storeSkillFile(skillFileContent);
     const resourceManifest = await this.resourceManifest.createSnapshot(
       input.resources
     );
-    const resources = [skillFile, ...resourceManifest];
 
     const { skill } = await this.repository.createSkill(
       {
         name: input.name,
-        resources,
-        skillFileMetadata: input,
+        resources: resourceManifest,
+        skillFile,
+        skillFileMetadata: {
+          ...input,
+          frontmatter: parsedSkillFile.frontmatter,
+        },
       },
       now
     );
@@ -341,10 +337,7 @@ export class SkillService {
     const currentResources = await this.repository.listResourcesBySkillPk(
       skill.pk
     );
-    const currentSkillFile = await this.readCurrentSkillFile(
-      skill,
-      currentResources
-    );
+    const currentSkillFile = await this.readCurrentSkillFile(skill);
     const nextMetadata = {
       allowedTools: patchValue(input, "allowedTools", skill.allowedTools),
       compatibility: patchValue(input, "compatibility", skill.compatibility),
@@ -370,25 +363,24 @@ export class SkillService {
       nextBody,
       currentSkillFile.frontmatter
     );
+    const nextSkillFile = parseSkillFile(skillFileContent);
     const skillFile =
       await this.resourceManifest.storeSkillFile(skillFileContent);
-    const resourceManifest = await this.resourceManifest.patchSnapshot(
+    const resources = await this.resourceManifest.patchSnapshot(
       currentResources,
       input
     );
-    const resources = [
-      skillFile,
-      ...resourceManifest.filter(
-        (resource) => resource.path !== skillContentPath
-      ),
-    ];
     const now = new Date();
     const updatedSkill = await this.repository.updateSkillState(
       {
         name: nextMetadata.name,
         origin: skill.origin,
         resources,
-        skillFileMetadata: nextMetadata,
+        skillFile,
+        skillFileMetadata: {
+          ...nextMetadata,
+          frontmatter: nextSkillFile.frontmatter,
+        },
         skillPk: skill.pk,
       },
       now
@@ -474,13 +466,13 @@ export class SkillService {
     const existingSkill = await this.repository.findSkillByName(
       definition.name
     );
+    const parsedSkillFile = parseSkillFile(definition.content);
     const skillFile = await this.resourceManifest.storeSkillFile(
       definition.content
     );
-    const resourceManifest = await this.resourceManifest.createSnapshot(
+    const resources = await this.resourceManifest.createSnapshot(
       definition.resources
     );
-    const resources = [skillFile, ...resourceManifest];
     const origin = {
       kind: definition.provenance.kind,
       metadata: definition.provenance.metadata,
@@ -493,7 +485,11 @@ export class SkillService {
           name: definition.name,
           origin,
           resources,
-          skillFileMetadata: definition,
+          skillFile,
+          skillFileMetadata: {
+            ...definition,
+            frontmatter: parsedSkillFile.frontmatter,
+          },
           skillPk: existingSkill.pk,
         },
         now
@@ -507,7 +503,11 @@ export class SkillService {
         name: definition.name,
         origin,
         resources,
-        skillFileMetadata: definition,
+        skillFile,
+        skillFileMetadata: {
+          ...definition,
+          frontmatter: parsedSkillFile.frontmatter,
+        },
       },
       now
     );
@@ -515,20 +515,10 @@ export class SkillService {
     return this.resolveSkill(skill.pk);
   }
 
-  private async readCurrentSkillFile(
-    skill: SkillRow,
-    resources: SkillResourceRow[]
-  ) {
-    const skillFileResource = resources.find(
-      (resource) => resource.path === skillContentPath
+  private async readCurrentSkillFile(skill: SkillRow) {
+    const object = await this.resourceManifest.getObjectBySha256(
+      skill.skillFileSha256
     );
-
-    if (!skillFileResource) {
-      throw skillErrors.skillFileNotFound();
-    }
-
-    const object =
-      await this.resourceManifest.getResourceObject(skillFileResource);
     const parsed = parseSkillFile(await object.text());
 
     return {

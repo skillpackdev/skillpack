@@ -32,6 +32,7 @@ const applyFreshSchema = async (db: D1Database) => {
     "0001_better_auth_oauth_provider.sql",
     "0002_api_keys.sql",
     "0003_skill_version_history.sql",
+    "0004_inline_skill_version_snapshots.sql",
   ]) {
     await applyMigration(db, join(process.cwd(), "migrations", migration));
   }
@@ -175,7 +176,7 @@ describe("MCP Skill authoring e2e", () => {
       versionResourceCount: versionResources.length,
     }).toStrictEqual({
       description: "Updated demo skill",
-      versionResourceCount: 4,
+      versionResourceCount: 2,
     });
   });
 });
