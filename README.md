@@ -206,11 +206,9 @@ Call it with an OAuth Bearer token that has `skills:read`.
 
 The MCP server exposes:
 
-- `skillpack_list` — list the authenticated user's Managed Skill catalog.
-- `skillpack_read` — read a `skill://skillpack/{skillName}` location or one
-  attached resource path.
-- MCP resources — list and read current Skill versions plus attached resources.
-- `use_skillpack_skills` — prompt guidance for agents.
+- `list_skills` — list the authenticated user's Managed Skill catalog with SEP-2640 `skill://{skillName}/SKILL.md` locations.
+- `read_skill` — read a Skillpack `SKILL.md` activation payload by Skill Name.
+- `create_skill` and `update_skill` — create and patch Managed Skills when the token has `skills:write`.
+- MCP resources — read `skill://index.json`, `skill://{skillName}/SKILL.md`, and attached resources such as `skill://{skillName}/references/guide.md`.
 
-Agents should use `skillpack_read` for `skill://skillpack/...` locations instead
-of filesystem reads.
+Agents use `read_skill` for Skillpack Skill Names and MCP `resources/read` for standard resource reads.

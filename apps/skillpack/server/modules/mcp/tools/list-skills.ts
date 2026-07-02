@@ -9,7 +9,7 @@ const listSkillsToolDefinition = {
     readOnlyHint: true,
   },
   description:
-    "Lists the authenticated user's Managed Skills with Skill Name, description, and skill:// location. Use this first to discover exact names and locations before reading or updating a skill.",
+    "Lists the authenticated user's Managed Skills with Skill Name, description, and canonical skill:// location. Use this first to discover exact names before reading or updating a skill.",
   title: "List Skillpack Skills",
 };
 

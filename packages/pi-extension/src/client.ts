@@ -6,7 +6,11 @@ import type {
   SkillResourceResponse,
 } from "@skillpack/contracts/skills/responses";
 
-import { parseSkillpackLocation, toSkillpackLocation } from "./skill-location";
+import {
+  parseSkillpackLocation,
+  skillFilePath,
+  toSkillpackLocation,
+} from "./skill-location";
 
 type Fetch = (input: string | URL, init?: RequestInit) => Promise<Response>;
 
@@ -141,6 +145,10 @@ export class SkillpackClient {
 
   async readSkill(location: string): Promise<SkillpackResolvedSkill> {
     const parsed = parseSkillpackLocation(location);
+    if (parsed.path !== skillFilePath) {
+      throw new Error("Expected skill://{skillName}/SKILL.md");
+    }
+
     const response = await this.request(
       (baseUrl) => new URL(`${baseUrl}/api/v1/skills/${parsed.skillName}`)
     );
@@ -155,16 +163,13 @@ export class SkillpackClient {
     };
   }
 
-  async readResource(
-    location: string,
-    path: string
-  ): Promise<SkillpackResource> {
+  async readResource(location: string): Promise<SkillpackResource> {
     const parsed = parseSkillpackLocation(location);
     const textResponse = await this.request((baseUrl) => {
       const textUrl = new URL(
         `${baseUrl}/api/v1/skills/${parsed.skillName}/resources`
       );
-      appendSearchParams(textUrl, { path });
+      appendSearchParams(textUrl, { path: parsed.path });
       return textUrl;
     });
 
@@ -175,12 +180,12 @@ export class SkillpackClient {
       }
 
       const rawResponse = await this.request((baseUrl) =>
-        getRawResourceUrl(baseUrl, parsed.skillName, path)
+        getRawResourceUrl(baseUrl, parsed.skillName, parsed.path)
       );
-      return readRawResource(rawResponse, path);
+      return readRawResource(rawResponse, parsed.path);
     }
 
-    return readRawResource(textResponse, path);
+    return readRawResource(textResponse, parsed.path);
   }
 
   private async request(input: (baseUrl: string) => string | URL) {

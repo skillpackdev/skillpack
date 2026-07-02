@@ -10,13 +10,13 @@ Each catalog entry contains:
 
 - Skill name
 - Description
-- `skill://skillpack/{skillName}` locator
+- SEP-2640 `skill://{skillName}/SKILL.md` locator
 
-When the agent needs skill instructions, it calls `skillpack_read` with the `skill://` locator and no `path`. The tool resolves the current Managed Skill state at read time. Attached resources are read with the same tool by passing a resource `path`.
+When the agent needs skill instructions, it calls `skillpack_read` with the `skill://` locator. The tool resolves the current Managed Skill state at read time. Attached resources are read with the same tool by passing the attached resource URI as `location`.
 
 Delivery surfaces may return structured Skill state or render a full `SKILL.md` compatibility payload when a consumer expects the file-based Agent Skills format. Skillpack's structured D1 metadata remains canonical over stored `SKILL.md` frontmatter.
 
-This keeps `skill://` locations out of normal filesystem reads and avoids pretending remote Skillpack resources are local paths.
+This keeps Skillpack delivery explicit: `skill://` identifies MCP Skill resources, and filesystem reads handle local files.
 
 ## Pi Extension
 
@@ -31,17 +31,23 @@ Responsibilities:
 - Register `skillpack_read` for reading the current Skill state and attached resources.
 - Register `/skillpack` for listing, selecting, and activating Skillpack skills.
 
-The `/skillpack` command accepts a Skill Name or `skill://skillpack/{skillName}` location. With no arguments, it opens a selector. Selecting a skill pre-fills `/skillpack:{name} ` in the editor so the user can add task prompt text before sending.
+The `/skillpack` command accepts a Skill Name or `skill://{skillName}/SKILL.md` location. With no arguments, it opens a selector. Selecting a skill pre-fills `/skillpack:{name} ` in the editor so the user can add task prompt text before sending.
 
 ## Locator
 
 Current Skill state:
 
 ```text
-skill://skillpack/{skillName}
+skill://{skillName}/SKILL.md
 ```
 
-Delivery identity is Skill Name in an authorized user context. GitHub URLs, source-qualified paths, internal Skill IDs, and stable version pins are not delivery identity.
+Attached resource:
+
+```text
+skill://{skillName}/{resourcePath}
+```
+
+Delivery identity is Skill Name in an authorized user context. `skill://` is a server-local Skill resource namespace; the segment after `skill://` is the Skill Name in Skillpack's single-segment namespace.
 
 ## API Reuse
 
@@ -68,9 +74,10 @@ The endpoint uses OAuth Bearer tokens with `skills:read`. The protected resource
 
 MCP capabilities:
 
-- `skillpack_list` lists the authenticated user's Managed Skill catalog.
-- `skillpack_read` reads `skill://skillpack/{skillName}` locations and attached resource paths.
-- MCP resources expose current Skills and attached resources for clients that prefer resource discovery.
+- `list_skills` lists the authenticated user's Managed Skill catalog with `skill://{skillName}/SKILL.md` locations.
+- `read_skill` reads `SKILL.md` activation payloads by Skill Name.
+- `create_skill` and `update_skill` create and patch Managed Skills when the token has `skills:write`.
+- MCP resources expose `skill://index.json`, current Skill files, and attached resources for clients that prefer resource discovery.
 
 The endpoint is stateless in v1 and uses request/response JSON over `@hono/mcp` Streamable HTTP transport.
 
@@ -92,8 +99,8 @@ There is no dev bypass in the extension.
 
 ## Intentional Non-Goals
 
-- Do not use Pi `resources_discover` for Skillpack remote skills in v1.
-- Do not register remote skills as local `/skill:name` filesystem skills.
-- Do not introduce Skill Sets for v1 catalog scope.
-- Do not add stable version pins to Skill Delivery.
-- Do not add stateful MCP SSE sessions until Skillpack introduces a durable state boundary for them.
+- Pi `resources_discover` integration for Skillpack remote skills in v1.
+- Remote skills registered as local `/skill:name` filesystem skills.
+- Skill Sets for v1 catalog scope.
+- Stable version pins in Skill Delivery.
+- Stateful MCP SSE sessions before Skillpack introduces a durable state boundary for them.

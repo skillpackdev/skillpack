@@ -1,4 +1,5 @@
 export interface SkillpackLocation {
+  path: string;
   skillName: string;
 }
 
@@ -7,9 +8,11 @@ export interface SkillpackCatalogItem {
   name: string;
 }
 
-const skillpackProtocol = "skill:";
-const skillpackHost = "skillpack";
+export const skillFilePath = "SKILL.md";
+
+const skillUriPrefix = "skill://";
 const skillNamePattern = /^(?=.*[a-z])[a-z0-9]+(?:-[a-z0-9]+)*$/u;
+const expectedSkillpackLocation = "Expected skill://{skillName}/{path}";
 
 export const escapeXml = (value: string) =>
   value
@@ -19,36 +22,72 @@ export const escapeXml = (value: string) =>
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&apos;");
 
+const decodePathSegment = (segment: string) => {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    throw new Error(expectedSkillpackLocation);
+  }
+};
+
 const parseSkillName = (value: string) => {
   if (!skillNamePattern.test(value)) {
-    throw new Error("Expected skill://skillpack/{skillName}");
+    throw new Error(expectedSkillpackLocation);
   }
 
   return value;
 };
 
-export const toSkillpackLocation = (skillName: string) =>
-  `skill://skillpack/${skillName}`;
+const isSafeRelativePath = (path: string) =>
+  !path.startsWith("/") &&
+  !path.includes("\\") &&
+  path.split("/").every((part) => part && part !== "." && part !== "..");
 
-export const parseSkillpackLocation = (location: string): SkillpackLocation => {
-  let url: URL;
-
-  try {
-    url = new URL(location);
-  } catch {
-    throw new Error("Expected skill://skillpack/{skillName}");
+const parseSkillResourcePath = (path: string) => {
+  if (
+    !isSafeRelativePath(path) ||
+    (path !== skillFilePath && path.split("/").includes(skillFilePath))
+  ) {
+    throw new Error(expectedSkillpackLocation);
   }
 
+  return path;
+};
+
+const encodePath = (path: string) =>
+  path.split("/").map(encodeURIComponent).join("/");
+
+export const toSkillpackResourceLocation = (
+  skillName: string,
+  path = skillFilePath
+) => `skill://${skillName}/${encodePath(path)}`;
+
+export const toSkillpackLocation = (skillName: string) =>
+  toSkillpackResourceLocation(skillName, skillFilePath);
+
+export const parseSkillpackLocation = (location: string): SkillpackLocation => {
   if (
-    url.protocol !== skillpackProtocol ||
-    url.hostname !== skillpackHost ||
-    url.search !== ""
+    !location.startsWith(skillUriPrefix) ||
+    location.includes("?") ||
+    location.includes("#")
   ) {
-    throw new Error("Expected skill://skillpack/{skillName}");
+    throw new Error(expectedSkillpackLocation);
+  }
+
+  const segments = location.slice(skillUriPrefix.length).split("/");
+  if (segments.length < 2) {
+    throw new Error(expectedSkillpackLocation);
+  }
+
+  const [rawSkillName, ...rawPathSegments] = segments;
+  const path = rawPathSegments.map(decodePathSegment).join("/");
+  if (!path) {
+    throw new Error(expectedSkillpackLocation);
   }
 
   return {
-    skillName: parseSkillName(url.pathname.replace(/^\//u, "")),
+    path: parseSkillResourcePath(path),
+    skillName: parseSkillName(decodePathSegment(rawSkillName)),
   };
 };
 
@@ -61,7 +100,7 @@ export const formatSkillpackCatalog = (skills: SkillpackCatalogItem[]) => {
     "",
     "The following Skillpack Managed Skills are available through Skill Delivery.",
     "When a task matches a Skillpack skill, call skillpack_read with its skill:// location.",
-    "Use skillpack_read with a resource path to read attached references, scripts, and assets.",
+    "Use skillpack_read with a full skill:// resource URI to read attached references, scripts, and assets.",
     "",
     "<skillpack_skills>",
   ];

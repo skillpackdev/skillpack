@@ -1,36 +1,64 @@
+import { skillContentPath } from "@server/constants";
 import {
   safeRelativePathSchema,
   skillNameSchema,
 } from "@skillpack/core/primitives";
 
-const skillpackLocationPattern =
-  /^skill:\/\/skillpack\/(?<skillName>[a-z0-9]+(?:-[a-z0-9]+)*)$/u;
+const skillUriPrefix = "skill://";
+const expectedSkillResourceUri = "Expected skill://{skillName}/{path}";
 
-export const toSkillpackLocation = (skillName: string) =>
-  `skill://skillpack/${skillName}`;
+export const skillIndexUri = "skill://index.json";
 
-export const toSkillpackResourceUri = (skillName: string, path: string) =>
-  `skillpack-resource://skillpack/${skillName}?path=${encodeURIComponent(path)}`;
+const encodePath = (path: string) =>
+  path.split("/").map(encodeURIComponent).join("/");
 
-export const parseSkillpackLocation = (location: string) => {
-  const match = skillpackLocationPattern.exec(location);
-
-  if (!match?.groups) {
-    throw new Error("Expected skill://skillpack/{skillName}");
+const decodePathSegment = (segment: string) => {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    throw new Error(expectedSkillResourceUri);
   }
-
-  return {
-    skillName: skillNameSchema.parse(match.groups.skillName),
-  };
 };
 
-export const parseSkillpackResourceUri = (uri: URL) => {
-  if (uri.protocol !== "skillpack-resource:" || uri.hostname !== "skillpack") {
-    throw new Error("Expected skillpack-resource://skillpack/{skillName}");
+const parseSkillResourcePath = (path: string) => {
+  const parsedPath = safeRelativePathSchema.parse(path);
+  if (
+    parsedPath !== skillContentPath &&
+    parsedPath.split("/").includes(skillContentPath)
+  ) {
+    throw new Error(expectedSkillResourceUri);
   }
 
+  return parsedPath;
+};
+
+export const toSkillpackResourceUri = (
+  skillName: string,
+  path = skillContentPath
+) => `skill://${skillName}/${encodePath(path)}`;
+
+export const toSkillpackLocation = (skillName: string) =>
+  toSkillpackResourceUri(skillName, skillContentPath);
+
+export const parseSkillpackResourceUri = (uri: string) => {
+  if (
+    !uri.startsWith(skillUriPrefix) ||
+    uri.includes("?") ||
+    uri.includes("#")
+  ) {
+    throw new Error(expectedSkillResourceUri);
+  }
+
+  const segments = uri.slice(skillUriPrefix.length).split("/");
+  if (segments.length < 2) {
+    throw new Error(expectedSkillResourceUri);
+  }
+
+  const [rawSkillName, ...rawPathSegments] = segments;
+  const path = rawPathSegments.map(decodePathSegment).join("/");
+
   return {
-    path: safeRelativePathSchema.parse(uri.searchParams.get("path")),
-    skillName: skillNameSchema.parse(uri.pathname.replace(/^\//u, "")),
+    path: parseSkillResourcePath(path),
+    skillName: skillNameSchema.parse(decodePathSegment(rawSkillName)),
   };
 };

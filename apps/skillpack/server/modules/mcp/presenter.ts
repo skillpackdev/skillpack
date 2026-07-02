@@ -1,6 +1,6 @@
 import { skillContentPath } from "@server/constants";
 
-import { toSkillpackLocation } from "./locators";
+import { toSkillpackLocation, toSkillpackResourceUri } from "./locators";
 
 const escapeXml = (value: string) =>
   value
@@ -32,7 +32,8 @@ export const formatSkillMutationResult = (skill: {
 
 export const formatSkillContent = (
   content: string,
-  resources: { mediaType: string; path: string; size: number }[]
+  resources: { mediaType: string; path: string; size: number }[],
+  skillName: string
 ) => {
   let formattedContent = `<skill>\n${content}`;
   const attachedResources = resources.filter(
@@ -43,7 +44,7 @@ export const formatSkillContent = (
     const lines = ["<resources>"];
     for (const resource of attachedResources) {
       lines.push(
-        `  <resource path="${escapeXml(resource.path)}" media_type="${escapeXml(resource.mediaType)}" size="${resource.size}" />`
+        `  <resource path="${escapeXml(resource.path)}" uri="${escapeXml(toSkillpackResourceUri(skillName, resource.path))}" media_type="${escapeXml(resource.mediaType)}" size="${resource.size}" />`
       );
     }
     lines.push("</resources>");

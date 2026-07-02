@@ -12,6 +12,9 @@ export interface ResolvedResourceManifest {
   resources: SkillResourceRow[];
 }
 
+const containsSkillContentPath = (path: string) =>
+  path.split("/").includes(skillContentPath);
+
 const validateResourcePaths = (resources: TextResourceInput[]) => {
   const resourcePaths = new Set(resources.map((resource) => resource.path));
 
@@ -19,7 +22,7 @@ const validateResourcePaths = (resources: TextResourceInput[]) => {
     throw skillErrors.duplicateResourcePath();
   }
 
-  if (resourcePaths.has(skillContentPath)) {
+  if ([...resourcePaths].some(containsSkillContentPath)) {
     throw skillErrors.reservedResourcePath();
   }
 };

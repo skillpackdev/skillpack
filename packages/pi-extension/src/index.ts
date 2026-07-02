@@ -11,14 +11,15 @@ import { createSkillpackOAuthProvider } from "./oauth";
 import {
   escapeXml,
   formatSkillpackCatalog,
+  parseSkillpackLocation,
+  skillFilePath,
   toSkillpackLocation,
+  toSkillpackResourceLocation,
 } from "./skill-location";
 import type { SkillpackCatalogItem } from "./skill-location";
 
 const skillpackProviderId = "skillpack";
 const catalogTtlMs = 30_000;
-const skillFilePath = "SKILL.md";
-
 interface SkillpackExtensionOptions {
   baseUrl?: string;
   client?: SkillpackClient;
@@ -46,7 +47,7 @@ const findSkillByArgument = (skills: SkillpackCatalogItem[], args: string) => {
     return;
   }
 
-  if (argument.startsWith("skill://skillpack/")) {
+  if (argument.startsWith("skill://")) {
     return skills.find((skill) => toSkillpackLocation(skill.name) === argument);
   }
 
@@ -60,7 +61,7 @@ const findSkillByArgument = (skills: SkillpackCatalogItem[], args: string) => {
 };
 
 const formatSkillpackSkillContent = (
-  skill: Pick<SkillpackResolvedSkill, "resources">,
+  skill: Pick<SkillpackResolvedSkill, "name" | "resources">,
   skillFileContent: string
 ) => {
   const lines = ["<skill>", skillFileContent.trim()];
@@ -73,7 +74,7 @@ const formatSkillpackSkillContent = (
     lines.push("<resources>");
     for (const resource of attachedResources) {
       lines.push(
-        `  <resource path="${escapeXml(resource.path)}" media_type="${escapeXml(resource.mediaType)}" size="${resource.size}" />`
+        `  <resource path="${escapeXml(resource.path)}" uri="${escapeXml(toSkillpackResourceLocation(skill.name, resource.path))}" media_type="${escapeXml(resource.mediaType)}" size="${resource.size}" />`
       );
     }
     lines.push("</resources>");
@@ -162,10 +163,7 @@ export const createSkillpackExtension =
     };
     const readSkillWithFile = async (location: string) => {
       const skill = await client.readSkill(location);
-      const skillFile = await client.readResource(
-        skill.location,
-        skillFilePath
-      );
+      const skillFile = await client.readResource(skill.location);
       const skillFileContent =
         skillFile.encoding === "text" ? skillFile.content : skill.content;
 
@@ -180,8 +178,8 @@ export const createSkillpackExtension =
       description:
         "Read a Skillpack skill or one of its attached resources from a skill:// location.",
       async execute(_toolCallId, params) {
-        const path = typeof params.path === "string" ? params.path.trim() : "";
-        if (path.length === 0 || path === skillFilePath) {
+        const location = parseSkillpackLocation(params.location);
+        if (location.path === skillFilePath) {
           const { skill, skillFileContent } = await readSkillWithFile(
             params.location
           );
@@ -197,7 +195,7 @@ export const createSkillpackExtension =
           };
         }
 
-        const resource = await client.readResource(params.location, path);
+        const resource = await client.readResource(params.location);
         return {
           content: [
             {
@@ -216,21 +214,14 @@ export const createSkillpackExtension =
       parameters: Type.Object({
         location: Type.String({
           description:
-            "Skillpack location, for example skill://skillpack/demo-skill",
+            "Skillpack location, for example skill://demo-skill/SKILL.md",
         }),
-        path: Type.Optional(
-          Type.String({
-            default: "SKILL.md",
-            description:
-              "Safe relative resource path. Omit or use SKILL.md to read the skill instructions.",
-          })
-        ),
       }),
       promptGuidelines: [
-        "Use skillpack_read for skill://skillpack locations instead of the filesystem read tool.",
-        "Omit path, or pass SKILL.md, to read the activation payload with SKILL.md frontmatter and Skillpack resources.",
-        "The skill result includes resource paths when attached files are available.",
-        "Pass a resource path to read references, scripts, and assets attached to the skill.",
+        "Use skillpack_read for Skillpack skill:// locations; filesystem reads handle local files.",
+        "Use a SKILL.md URI to read the activation payload with SKILL.md frontmatter and Skillpack resources.",
+        "The skill result includes full resource URIs when attached files are available.",
+        "Pass the attached resource URI as location to read references, scripts, and assets.",
       ],
       promptSnippet:
         "Read Skillpack skill instructions and attached resources from skill:// locations",

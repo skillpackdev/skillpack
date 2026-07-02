@@ -148,19 +148,15 @@ describe("MCP Skill authoring e2e", () => {
     const readResponse = await app.request(
       "/mcp",
       mcpRequest("tools/call", {
-        arguments: { location: "skill://skillpack/mcp-demo" },
+        arguments: { name: "mcp-demo" },
         name: "read_skill",
       }),
       env
     );
     const resourceResponse = await app.request(
       "/mcp",
-      mcpRequest("tools/call", {
-        arguments: {
-          location: "skill://skillpack/mcp-demo",
-          path: "references/note.txt",
-        },
-        name: "read_skill",
+      mcpRequest("resources/read", {
+        uri: "skill://mcp-demo/references/note.txt",
       }),
       env
     );

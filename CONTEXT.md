@@ -45,7 +45,7 @@ The lowercase-hyphen operation name for a Managed Skill inside one user's Skill 
 _Avoid_: Global name, display-only label, numeric Skill ID as user-facing identity, public UUID as skill identity
 
 **Skill Location**:
-An agent-facing private `skill://skillpack/{skillName}` locator derived from Skill Name within an authorized user context. Agents and harnesses resolve Skill Locations through Skillpack APIs, MCP tools, or extension tools to obtain the current `SKILL.md`, resources, and access metadata; the URI itself is not a fetchable content URL. Skill Locations resolve to the current Managed Skill state for delivery.
+An agent-facing private SEP-2640 `skill://{skillName}/SKILL.md` resource locator derived from Skill Name within an authorized user context. Attached files are addressed as sibling resources under the same skill path, such as `skill://{skillName}/references/guide.md`. Agents and harnesses resolve Skill Locations through Skillpack APIs, MCP resources, MCP tools, or extension tools to obtain the current `SKILL.md`, resources, and access metadata. Skill Locations resolve to the current Managed Skill state for delivery.
 _Avoid_: Numeric ID locator, source-qualified locator, GitHub locator, raw URL, direct download URL, stable version pin
 
 **Skill Version**:

@@ -135,12 +135,12 @@ Structured reads return Skill state as fields such as name, description, metadat
 A Skill Location is an agent-facing private locator derived from Skill Name within an authorized user context:
 
 ```text
-skill://skillpack/{skillName}
+skill://{skillName}/SKILL.md
 ```
 
-Skill Locations resolve to the current Managed Skill state at read time. Skillpack does not expose stable version pins in Skill Locations.
+Skill Locations resolve to the current Managed Skill state at read time. Skillpack exposes stable current-state MCP resource locators and leaves historical version pins out of Skill Locations.
 
-Skill Locations are not fetchable content URLs. Agents and harnesses resolve them through Skillpack APIs, MCP tools, extension tools, or future delivery interfaces in an authorized user context. The same Skill Name may exist in different users' Libraries; authorization determines which Managed Skill is resolved.
+Skill Locations are server-local MCP resource locators. The segment after `skill://` is the Skill Name in Skillpack's single-segment skill namespace. Agents and harnesses resolve Skill Locations through Skillpack APIs, MCP resources, MCP tools, extension tools, or future delivery interfaces in an authorized user context. The same Skill Name may exist in different users' Libraries; authorization determines which Managed Skill is resolved.
 
 ### Skill Trust
 
@@ -168,7 +168,7 @@ Delivery may resolve individual Managed Skills now and Skill Sets later.
 
 ### Keep aggregator and source-qualified Skill Locations
 
-This was the older north star. It preserved upstream source identity in agent-facing locators, for example `skill://github/{owner}/{repo}/{skillName}`.
+This was the older north star. It preserved upstream source identity in agent-facing locators, for example `github://{owner}/{repo}/skills/{skillName}/SKILL.md`.
 
 Rejected because it ties agent consumption to upstream identity and makes GitHub repo changes, branch movement, source namespace conflicts, and source-specific revision semantics part of the agent-facing model.
 
@@ -180,7 +180,7 @@ Rejected because it makes version history the primary write path. Skillpack need
 
 ### Keep stable delivery pins
 
-This would preserve `skill://skillpack/{skillName}?version={number}` so agents can resolve historical content.
+This would preserve `skill://{skillName}/SKILL.md?version={number}` so agents can resolve historical content.
 
 Rejected because stable pins add read-path, cache, API, UI, and mental-model complexity. Agent sessions are generally short-lived, and current-state Skill Delivery better matches the product model.
 
@@ -315,16 +315,16 @@ Affected files:
 
 Required changes:
 
-- Generate Skill Location as `skill://skillpack/{skillName}`.
-- Parse Skill Locations by Skill Name only.
+- Generate Skill Location as `skill://{skillName}/SKILL.md`.
+- Parse Skill Locations as SEP-2640 resource locators and derive Skill Name from the first skill-path segment.
 - Remove `?version=` parsing from delivery locators.
 - Remove pinned resource URI behavior unless a future protocol-specific need introduces a new explicit concept.
 
 Verification:
 
-- `skill://skillpack/demo-skill` resolves Skill Name `demo-skill` in the authorized user's Library.
-- `skill://skillpack/demo-skill?version=2` is not accepted as current Skill Delivery identity.
-- `skill://github/...` is not part of agent-facing managed skill resolution.
+- `skill://demo-skill/SKILL.md` resolves Skill Name `demo-skill` in the authorized user's Library.
+- `skill://demo-skill/SKILL.md?version=2` is not accepted as current Skill Delivery identity.
+- `github://...` is not part of agent-facing managed skill resolution.
 
 ### 4. Update backend routes and services
 
@@ -404,7 +404,7 @@ Affected files:
 
 Required changes:
 
-- Catalog entries contain Skill Name, description, and `skill://skillpack/{skillName}` locator.
+- Catalog entries contain Skill Name, description, and `skill://{skillName}/SKILL.md` locator.
 - Remove current numeric version from catalog entries.
 - Remove version-pinned MCP resources and resource URIs.
 - Keep rendered `SKILL.md` output as an explicit compatibility behavior when a delivery surface needs a full Skill file.
@@ -437,7 +437,7 @@ Verification:
 
 - [ ] `CONTEXT.md` uses Managed Skill, Skill Origin, Fork, Origin Comparison, Skill ID, Skill Name, Skill Snapshot, Skill Set, and Skill Delivery consistently.
 - [ ] No primary skill API depends on `source_type`, `handle`, public Skill ID, or version pin.
-- [ ] Skill Location generation uses `skill://skillpack/{skillName}` only.
+- [ ] Skill Location generation uses `skill://{skillName}/SKILL.md` only.
 - [ ] PATCH updates current Skill state without creating a Snapshot.
 - [ ] Manual Snapshot create captures whole Skill state.
 - [ ] Add to Library update creates a pre-update Snapshot by default.

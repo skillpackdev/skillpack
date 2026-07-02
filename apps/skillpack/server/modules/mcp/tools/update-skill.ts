@@ -55,11 +55,11 @@ const updateSkillMcpSchema = z.object({
   ),
   name: skillNameSchema
     .describe(
-      "New Skill Name. Renames the Skillpack location to skill://skillpack/{name}."
+      "New Skill Name. Renames the Skillpack location to skill://{name}/SKILL.md."
     )
     .optional(),
   skillName: skillNameSchema.describe(
-    "Current Skill Name to patch. Use the name segment from skill://skillpack/{skillName}."
+    "Current Skill Name to patch. Use the name segment from skill://{skillName}/SKILL.md."
   ),
   upsertResources: z
     .array(updateSkillResourceSchema)
@@ -76,7 +76,7 @@ const updateSkillToolDefinition = {
     openWorldHint: false,
   },
   description:
-    "Patches an existing Skillpack Managed Skill by current Skill Name. Each successful update appends a recoverable version node and moves the skill head. Call read_skill first when editing existing content. Omitted fields stay unchanged. Use upsertResources to add or replace text resources, deleteResourcePaths to remove attachments, and upsertResources with path SKILL.md to submit a complete SKILL.md whose frontmatter updates metadata and whose body updates skill content.",
+    "Patches an existing Skillpack Managed Skill by current Skill Name. Each successful update appends a recoverable version node and moves the skill head. Call read_skill with the Skill Name first when editing existing content. Omitted fields stay unchanged. Use upsertResources to add or replace text resources, deleteResourcePaths to remove attachments, and upsertResources with path SKILL.md to submit a complete SKILL.md whose frontmatter updates metadata and whose body updates skill content.",
   inputSchema: updateSkillMcpSchema.shape,
   title: "Update Skillpack Skill",
 };

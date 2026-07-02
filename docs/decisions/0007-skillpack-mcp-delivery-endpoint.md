@@ -36,9 +36,10 @@ For v1:
   event store, or Durable Object is introduced.
 - unexpected browser `Origin` headers are rejected.
 - the MCP server exposes:
-  - `skillpack_list`;
-  - `skillpack_read`;
-  - MCP resources for current Skills and attached resources.
+  - `list_skills`;
+  - `read_skill`;
+  - `create_skill` and `update_skill` for tokens with `skills:write`;
+  - SEP-2640 MCP resources for `skill://index.json`, current `SKILL.md` files, and attached resources.
 
 The Worker static asset configuration must run the Worker first for `/mcp` so
 the SPA fallback cannot intercept MCP requests.

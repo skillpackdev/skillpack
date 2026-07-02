@@ -46,10 +46,10 @@ describe(SkillpackClient, () => {
     });
 
     await expect(
-      client.readSkill("skill://skillpack/demo-skill")
+      client.readSkill("skill://demo-skill/SKILL.md")
     ).resolves.toMatchObject({
       content: "# Demo\n\nUse this.",
-      location: "skill://skillpack/demo-skill",
+      location: "skill://demo-skill/SKILL.md",
       name: "demo-skill",
       resources: [{ path: "references/demo.md" }],
     });
@@ -74,7 +74,7 @@ describe(SkillpackClient, () => {
     });
 
     await expect(
-      client.readResource("skill://skillpack/demo-skill", "references/demo.md")
+      client.readResource("skill://demo-skill/references/demo.md")
     ).resolves.toStrictEqual({
       content: "# Reference",
       encoding: "text",
@@ -102,7 +102,7 @@ describe(SkillpackClient, () => {
     });
 
     await expect(
-      client.readResource("skill://skillpack/demo-skill", "assets/logo.png")
+      client.readResource("skill://demo-skill/assets/logo.png")
     ).resolves.toStrictEqual({
       content: "AQID",
       encoding: "base64",

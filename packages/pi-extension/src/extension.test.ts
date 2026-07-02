@@ -55,7 +55,7 @@ const demoSkillFileContent =
 const demoSkillReadResult = {
   content: "# Demo\n\nUse this.",
   description: "Demo skill",
-  location: "skill://skillpack/demo-skill",
+  location: "skill://demo-skill/SKILL.md",
   name: "demo-skill",
   resources: [
     {
@@ -85,7 +85,7 @@ const demoSkillFileResource = {
 };
 
 const formattedDemoSkill =
-  '<skill>\n---\nname: demo-skill\ndescription: Demo skill\n---\n\n# Demo\n\nUse this.\n\n<resources>\n  <resource path="references/demo.md" media_type="text/markdown; charset=&quot;utf-8&quot;" size="12" />\n</resources>\n</skill>';
+  '<skill>\n---\nname: demo-skill\ndescription: Demo skill\n---\n\n# Demo\n\nUse this.\n\n<resources>\n  <resource path="references/demo.md" uri="skill://demo-skill/references/demo.md" media_type="text/markdown; charset=&quot;utf-8&quot;" size="12" />\n</resources>\n</skill>';
 
 describe("Skillpack Pi extension", () => {
   it("registers the read tool and injects a Skillpack catalog", async () => {
@@ -117,12 +117,12 @@ describe("Skillpack Pi extension", () => {
 
     expect(result).toStrictEqual({
       systemPrompt: expect.stringContaining(
-        "<location>skill://skillpack/demo-skill</location>"
+        "<location>skill://demo-skill/SKILL.md</location>"
       ),
     });
   });
 
-  it("returns Pi-style skill content from skillpack_read without a path", async () => {
+  it("returns Pi-style skill content from a SKILL.md URI", async () => {
     const client = {
       listSkills: vi.fn<() => Promise<unknown>>(),
       readResource: vi.fn<() => Promise<unknown>>(() =>
@@ -140,15 +140,14 @@ describe("Skillpack Pi extension", () => {
       .get("skillpack_read")
       ?.execute(
         "tool-call-id",
-        { location: "skill://skillpack/demo-skill" },
+        { location: "skill://demo-skill/SKILL.md" },
         undefined,
         undefined,
         {}
       );
 
     expect(client.readResource).toHaveBeenCalledWith(
-      "skill://skillpack/demo-skill",
-      "SKILL.md"
+      "skill://demo-skill/SKILL.md"
     );
     expect(result).toStrictEqual({
       content: [
@@ -161,7 +160,7 @@ describe("Skillpack Pi extension", () => {
     });
   });
 
-  it("reads attached resources from skillpack_read with a path", async () => {
+  it("reads attached resources from a full skill resource URI", async () => {
     const client = {
       listSkills: vi.fn<() => Promise<unknown>>(),
       readResource: vi.fn<() => Promise<unknown>>(() =>
@@ -181,20 +180,18 @@ describe("Skillpack Pi extension", () => {
 
     createSkillpackExtension({ client })(pi);
 
-    const result = await tools.get("skillpack_read")?.execute(
-      "tool-call-id",
-      {
-        location: "skill://skillpack/demo-skill",
-        path: "references/demo.md",
-      },
-      undefined,
-      undefined,
-      {}
-    );
+    const result = await tools
+      .get("skillpack_read")
+      ?.execute(
+        "tool-call-id",
+        { location: "skill://demo-skill/references/demo.md" },
+        undefined,
+        undefined,
+        {}
+      );
 
     expect(client.readResource).toHaveBeenCalledWith(
-      "skill://skillpack/demo-skill",
-      "references/demo.md"
+      "skill://demo-skill/references/demo.md"
     );
     expect(client.readSkill).not.toHaveBeenCalled();
     expect(result).toStrictEqual({
@@ -227,7 +224,7 @@ describe("Skillpack Pi extension", () => {
       ui: {
         notify: vi.fn<(message: string, type?: string) => void>(),
         select: vi.fn<() => Promise<string | undefined>>(() =>
-          Promise.resolve("demo-skill  skill://skillpack/demo-skill")
+          Promise.resolve("demo-skill  skill://demo-skill/SKILL.md")
         ),
         setEditorText: vi.fn<(text: string) => void>(),
       },
@@ -277,11 +274,10 @@ describe("Skillpack Pi extension", () => {
     );
 
     expect(client.readSkill).toHaveBeenCalledWith(
-      "skill://skillpack/demo-skill"
+      "skill://demo-skill/SKILL.md"
     );
     expect(client.readResource).toHaveBeenCalledWith(
-      "skill://skillpack/demo-skill",
-      "SKILL.md"
+      "skill://demo-skill/SKILL.md"
     );
     expect(result).toStrictEqual({
       action: "transform",

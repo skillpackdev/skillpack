@@ -1,12 +1,9 @@
 import { ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
 import { skillContentPath } from "@server/constants";
 
-import {
-  parseSkillpackLocation,
-  toSkillpackLocation,
-  toSkillpackResourceUri,
-} from "../locators";
+import { parseSkillpackResourceUri, toSkillpackResourceUri } from "../locators";
 import type { SkillpackMcpContext } from "../types";
 
 interface ListedMcpResource {
@@ -17,10 +14,16 @@ interface ListedMcpResource {
   uri: string;
 }
 
+const toInvalidParamsError = (error: unknown) =>
+  new McpError(
+    ErrorCode.InvalidParams,
+    error instanceof Error ? error.message : String(error)
+  );
+
 const skillResourceDefinition = {
   description:
-    "Current SKILL.md instructions for a Skillpack Managed Skill, addressed by skill://skillpack/{skillName}.",
-  title: "Skillpack Skill",
+    "Files within Skillpack Managed Skill directories, addressed by skill://{skillName}/{path}.",
+  title: "Skillpack Skill Resource",
 };
 
 export const registerSkillResource = (
@@ -28,8 +31,8 @@ export const registerSkillResource = (
   context: SkillpackMcpContext
 ) => {
   server.registerResource(
-    "skill",
-    new ResourceTemplate("skill://skillpack/{skillName}", {
+    "skill_resource",
+    new ResourceTemplate("skill://{skillName}/{+path}", {
       list: async () => {
         const skills = await context.skillService.listSkills();
         const resources: ListedMcpResource[] = [];
@@ -38,26 +41,15 @@ export const registerSkillResource = (
           const resolvedSkill = await context.skillService.resolveSkillByName(
             skill.name
           );
-          const skillFile = resolvedSkill.resources.find(
-            (resource) => resource.path === skillContentPath
-          );
-
-          resources.push({
-            description: skill.description,
-            mimeType: skillFile?.mediaType,
-            name: skill.name,
-            size: skillFile?.size,
-            uri: toSkillpackLocation(skill.name),
-          });
 
           for (const resource of resolvedSkill.resources) {
-            if (resource.path === skillContentPath) {
-              continue;
-            }
-
+            const isSkillFile = resource.path === skillContentPath;
             resources.push({
+              description: isSkillFile ? skill.description : undefined,
               mimeType: resource.mediaType,
-              name: `${skill.name}: ${resource.path}`,
+              name: isSkillFile
+                ? skill.name
+                : `${skill.name}: ${resource.path}`,
               size: resource.size,
               uri: toSkillpackResourceUri(skill.name, resource.path),
             });
@@ -69,11 +61,14 @@ export const registerSkillResource = (
     }),
     skillResourceDefinition,
     async (uri) => {
-      const parsed = parseSkillpackLocation(uri.toString());
-      const result = await context.skillService.readSkillTextFileByName({
-        path: skillContentPath,
-        skillName: parsed.skillName,
-      });
+      let parsed: ReturnType<typeof parseSkillpackResourceUri>;
+      try {
+        parsed = parseSkillpackResourceUri(uri.toString());
+      } catch (error) {
+        throw toInvalidParamsError(error);
+      }
+
+      const result = await context.skillService.readSkillTextFileByName(parsed);
 
       return {
         contents: [

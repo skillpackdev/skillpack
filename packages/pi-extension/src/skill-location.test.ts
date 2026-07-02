@@ -6,24 +6,37 @@ import {
 } from "./skill-location";
 
 describe("Skillpack Skill Locations", () => {
-  it("parses current Skillpack locations by Skill Name", () => {
+  it("parses current Skillpack resource locations by Skill Name", () => {
+    expect(parseSkillpackLocation("skill://demo-skill/SKILL.md")).toStrictEqual(
+      {
+        path: "SKILL.md",
+        skillName: "demo-skill",
+      }
+    );
     expect(
-      parseSkillpackLocation("skill://skillpack/demo-skill")
+      parseSkillpackLocation("skill://demo-skill/references/demo.md")
     ).toStrictEqual({
+      path: "references/demo.md",
       skillName: "demo-skill",
     });
   });
 
-  it("rejects non-Skillpack, malformed, or pinned locations", () => {
-    expect(() => parseSkillpackLocation("skill://github/acme/demo")).toThrow(
-      "Expected skill://skillpack/{skillName}"
+  it("rejects malformed or pinned locations", () => {
+    expect(() => parseSkillpackLocation("skill://demo-skill")).toThrow(
+      "Expected skill://{skillName}/{path}"
     );
-    expect(() => parseSkillpackLocation("skill://skillpack/42")).toThrow(
-      "Expected skill://skillpack/{skillName}"
+    expect(() => parseSkillpackLocation("skill://42/SKILL.md")).toThrow(
+      "Expected skill://{skillName}/{path}"
     );
     expect(() =>
-      parseSkillpackLocation("skill://skillpack/demo-skill?version=7")
-    ).toThrow("Expected skill://skillpack/{skillName}");
+      parseSkillpackLocation("skill://demo-skill/SKILL.md?version=7")
+    ).toThrow("Expected skill://{skillName}/{path}");
+    expect(() =>
+      parseSkillpackLocation("skill://demo-skill/../secret.md")
+    ).toThrow("Expected skill://{skillName}/{path}");
+    expect(() =>
+      parseSkillpackLocation("skill://demo-skill/references/SKILL.md")
+    ).toThrow("Expected skill://{skillName}/{path}");
   });
 
   it("formats catalog entries for system prompt injection", () => {
@@ -34,7 +47,7 @@ describe("Skillpack Skill Locations", () => {
           name: "demo-skill",
         },
       ])
-    ).toContain("<location>skill://skillpack/demo-skill</location>");
+    ).toContain("<location>skill://demo-skill/SKILL.md</location>");
     expect(
       formatSkillpackCatalog([
         {
