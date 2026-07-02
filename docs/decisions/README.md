@@ -25,3 +25,4 @@ Architecture Decision Records capture important architecture decisions, their co
 - [ADR-0006: Use TanStack Router File-Based Routing for the SPA](0006-tanstack-router-file-based-routing.md) — accepted
 - [ADR-0007: Expose Skillpack Skill Delivery over MCP](0007-skillpack-mcp-delivery-endpoint.md) — accepted
 - [ADR-0008: Restructure Skill Storage as a Content-Addressed Version DAG](0008-skill-storage-version-dag.md) — proposed
+- [ADR-0009: Inline Skill Version Snapshots with First-Class SKILL.md Pointers](0009-inline-skill-version-snapshots.md) — accepted

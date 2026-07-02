@@ -8,6 +8,11 @@ informed: Future Skillpack maintainers and coding agents
 
 # ADR-0008: Restructure Skill Storage as a Content-Addressed Version DAG
 
+> ADR-0009 refines this ADR's storage schema details for `SKILL.md`, Skill
+> Origin, optional frontmatter, and Resource Manifests. The append-only Version
+> DAG, mutable head pointer, Version Labels, and safe write-loop decisions remain
+> the governing model.
+
 Skillpack restructures Skill storage from a single mutable Skill row into a
 content-addressed version DAG with a mutable head pointer and version labels.
 Enabling agents to author and iterate on Skills through `/mcp`
