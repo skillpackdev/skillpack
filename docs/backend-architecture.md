@@ -114,9 +114,9 @@ Rules:
 - Repositories must not validate HTTP requests.
 - Repositories must not depend on Hono context.
 
-Managed Skill current-state writes are a repository concern. The service prepares the Resource Manifest first, then the repository appends an immutable `skill_versions` node, writes complete `skill_version_resources` manifest rows, and moves `skills.head_version_pk` with D1 `batch()` and SQL subqueries where needed. The `skills.head_version_pk` NOT NULL column represents the exactly-one-head invariant; the repository's append-and-move batch enforces that the head points at the appended Skill Version. Version Labels live in `skill_version_labels` and retain labelled versions permanently. Do not use Drizzle `transaction()` for this path; D1 rejects the SQL `BEGIN`/`SAVEPOINT` statements emitted by that adapter.
+Managed Skill current-state writes are a repository concern. The service stores the canonical `SKILL.md` object and attached Resource Manifest objects in R2 first, then the repository appends an immutable `skill_versions` node with `skill_file_sha256`, `skill_file_size`, `frontmatter`, and inline `resource_manifest` JSON before moving `skills.head_version_pk` with D1 `batch()` and SQL subqueries where needed. The `skills.head_version_pk` NOT NULL column represents the exactly-one-head invariant; the repository's append-and-move batch enforces that the head points at the appended Skill Version. Version Labels live in `skill_version_labels` and retain labelled versions permanently. Do not use Drizzle `transaction()` for this path; D1 rejects the SQL `BEGIN`/`SAVEPOINT` statements emitted by that adapter.
 
-Repository create methods should create complete domain objects, not placeholder rows. For Managed Skills, creation means committing the `skills` row and current resource rows together after the service has prepared any R2 objects. This avoids invisible records that reserve a unique name but cannot be resolved or listed as a Managed Skill.
+Repository create methods should create complete domain objects, not placeholder rows. For Managed Skills, creation means committing the `skills` row and first `skill_versions` row together after the service has prepared all R2 objects. This avoids invisible records that reserve a unique name but cannot be resolved or listed as a Managed Skill.
 
 ### `storage.ts`
 

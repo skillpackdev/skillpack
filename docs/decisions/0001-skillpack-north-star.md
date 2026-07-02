@@ -1,13 +1,16 @@
 ---
-status: proposed
+status: superseded
 date: 2026-05-25
-updated: 2026-06-04
+updated: 2026-07-02
+superseded-by: ADR-0008, ADR-0009, CONTEXT.md
 decision-makers: Sean
 consulted: Current Skillpack codebase, CONTEXT.md, backend architecture guidance, agent skills reference, Skill Delivery docs, MCP delivery ADR
 informed: Future Skillpack maintainers and coding agents
 ---
 
 # ADR-0001: Define Skillpack as a Skill-Centric Management Platform
+
+> Superseded as an implementation guide. Use `CONTEXT.md` for current domain language, ADR-0008 for the append-only Skill Version DAG, and ADR-0009 for first-class `SKILL.md` pointers plus inline attached Resource Manifests. This ADR remains useful historical context for Skillpack's skill-centric product direction.
 
 Skillpack is a Skills Management Platform for agents. It manages user-owned skills as platform-owned Skill objects, organizes them into user-curated skill collections, and delivers Skills to agent runtimes through Skillpack-mediated interfaces.
 
