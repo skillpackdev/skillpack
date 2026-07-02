@@ -162,7 +162,17 @@ describe("MCP Skill authoring e2e", () => {
       env
     );
 
-    await expect(readResponse.text()).resolves.toContain("Updated by MCP");
+    const readBody = await readResponse.text();
+
+    expect({
+      hasUpdatedBody: readBody.includes("Updated by MCP"),
+      hasUpdatedFrontmatter: readBody.includes(
+        "description: Updated demo skill"
+      ),
+    }).toStrictEqual({
+      hasUpdatedBody: true,
+      hasUpdatedFrontmatter: true,
+    });
     await expect(resourceResponse.text()).resolves.toContain("second note");
 
     const repository = new SkillRepository(createDb(env.DB), "user-e2e");

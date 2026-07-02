@@ -31,14 +31,15 @@ export const registerReadSkillTool = (
     readSkillToolDefinition,
     async (rawInput) => {
       const { name } = readSkillMcpSchema.parse(rawInput);
-      const resolvedSkill = await context.skillService.resolveSkillByName(name);
+      const activation =
+        await context.skillService.readSkillActivationByName(name);
 
       return {
         content: [
           {
             text: formatSkillContent(
-              resolvedSkill.content,
-              resolvedSkill.resources,
+              activation.skillFileContent,
+              activation.resources,
               name
             ),
             type: "text",

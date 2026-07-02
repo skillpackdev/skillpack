@@ -49,9 +49,18 @@ export interface SkillWithCurrentResources extends SkillWithCurrentState {
   resources: SkillResourceRow[];
 }
 
+export interface SkillWithCurrentAttachedResources extends SkillWithCurrentState {
+  resources: SkillResourceRow[];
+}
+
 export interface ResolvedSkillResult extends SkillWithCurrentState {
   content: string;
   resources: SkillResourceRow[];
+}
+
+export interface SkillActivationResult extends SkillWithCurrentState {
+  resources: SkillResourceRow[];
+  skillFileContent: string;
 }
 
 export interface SkillVersionListItem {

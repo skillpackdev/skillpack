@@ -1,7 +1,9 @@
+import { skillContentPath } from "@server/constants";
 import type { OriginService } from "@server/modules/origins/service";
 import type { OriginSkillDefinition } from "@server/modules/origins/types";
 import type { SkillFileMetadata } from "@server/shared/skill-file";
 import { parseSkillFile, serializeSkillFile } from "@server/shared/skill-file";
+import { markdownMediaType } from "@server/shared/text-resource";
 
 import { skillErrors } from "./errors";
 import type { SkillRepository } from "./repository";
@@ -17,7 +19,9 @@ import type {
   ReadSkillFileResult,
   ReadSkillTextFileResult,
   ResolvedSkillResult,
+  SkillActivationResult,
   SkillRow,
+  SkillWithCurrentAttachedResources,
   SkillVersionHistoryResult,
   SkillVersionLabelResult,
   VersionedSkillResult,
@@ -93,36 +97,57 @@ export class SkillService {
   }
 
   async resolveSkill(skillPk: number): Promise<ResolvedSkillResult> {
-    const skill = await this.repository.findSkillByPk(skillPk);
+    const state =
+      await this.repository.findSkillWithCurrentAttachedResourcesByPk(skillPk);
 
-    if (!skill) {
+    if (!state) {
       throw skillErrors.skillNotFound();
     }
 
-    return await this.resolveCurrentSkill(skill);
+    return await this.resolveSkillState(state);
   }
 
   async resolveSkillByName(name: string): Promise<ResolvedSkillResult> {
-    const skill = await this.repository.findSkillByName(name);
+    const state =
+      await this.repository.findSkillWithCurrentAttachedResourcesByName(name);
 
-    if (!skill) {
+    if (!state) {
       throw skillErrors.skillNotFound();
     }
 
-    return await this.resolveCurrentSkill(skill);
+    return await this.resolveSkillState(state);
   }
 
-  private async resolveCurrentSkill(
-    skill: SkillRow
+  async readSkillActivationByName(
+    name: string
+  ): Promise<SkillActivationResult> {
+    const state =
+      await this.repository.findSkillWithCurrentAttachedResourcesByName(name);
+
+    if (!state) {
+      throw skillErrors.skillNotFound();
+    }
+
+    const manifest = ResourceManifest.resolveSnapshot(state.resources);
+    const skillFile = await this.readSkillFileSnapshot(state.skill);
+
+    return {
+      resources: manifest.resources,
+      skill: state.skill,
+      skillFileContent: skillFile.content,
+    };
+  }
+
+  private async resolveSkillState(
+    state: SkillWithCurrentAttachedResources
   ): Promise<ResolvedSkillResult> {
-    const resources = await this.repository.listResourcesBySkillPk(skill.pk);
-    const manifest = ResourceManifest.resolveSnapshot(resources);
-    const skillFile = await this.readCurrentSkillFile(skill);
+    const manifest = ResourceManifest.resolveSnapshot(state.resources);
+    const skillFile = await this.readSkillFileSnapshot(state.skill);
 
     return {
       content: skillFile.body,
       resources: manifest.resources,
-      skill,
+      skill: state.skill,
     };
   }
 
@@ -197,7 +222,7 @@ export class SkillService {
         input.versionId
       );
     const manifest = ResourceManifest.resolveSnapshot(resources);
-    const skillFile = await this.readCurrentSkillFile(skill);
+    const skillFile = await this.readSkillFileSnapshot(skill);
 
     return {
       content: skillFile.body,
@@ -255,7 +280,7 @@ export class SkillService {
       new Date()
     );
 
-    return await this.resolveCurrentSkill(restoredSkill);
+    return await this.resolveSkill(restoredSkill.pk);
   }
 
   async createSkill(input: CreateSkillServiceInput) {
@@ -288,36 +313,35 @@ export class SkillService {
     skillPk: number,
     input: PatchSkillServiceInput
   ): Promise<PatchSkillResult> {
-    const skill = await this.repository.findSkillByPk(skillPk);
+    const state =
+      await this.repository.findSkillWithCurrentAttachedResourcesByPk(skillPk);
 
-    if (!skill) {
+    if (!state) {
       throw skillErrors.skillNotFound();
     }
 
-    return await this.patchResolvedSkill(skill, input);
+    return await this.patchResolvedSkill(state, input);
   }
 
   async patchSkillByName(
     name: string,
     input: PatchSkillServiceInput
   ): Promise<PatchSkillResult> {
-    const skill = await this.repository.findSkillByName(name);
+    const state =
+      await this.repository.findSkillWithCurrentAttachedResourcesByName(name);
 
-    if (!skill) {
+    if (!state) {
       throw skillErrors.skillNotFound();
     }
 
-    return await this.patchResolvedSkill(skill, input);
+    return await this.patchResolvedSkill(state, input);
   }
 
   private async patchResolvedSkill(
-    skill: SkillRow,
+    state: SkillWithCurrentAttachedResources,
     input: PatchSkillServiceInput
   ): Promise<PatchSkillResult> {
-    const currentResources = await this.repository.listResourcesBySkillPk(
-      skill.pk
-    );
-    const currentSkillFile = await this.readCurrentSkillFile(skill);
+    const { resources: currentResources, skill } = state;
     const nextMetadata = {
       allowedTools: patchValue(input, "allowedTools", skill.allowedTools),
       compatibility: patchValue(input, "compatibility", skill.compatibility),
@@ -326,26 +350,27 @@ export class SkillService {
       metadata: patchValue(input, "metadata", skill.metadata),
       name: input.name ?? skill.name,
     };
-    const nextBody = input.content ?? currentSkillFile.body;
     const hasResourceChanges =
       input.deleteResourcePaths.length > 0 || input.upsertResources.length > 0;
+    const hasSkillFileChanges =
+      input.content !== undefined ||
+      !skillFileMetadataEquals(nextMetadata, getSkillFileMetadata(skill));
 
-    if (
-      !hasResourceChanges &&
-      nextBody === currentSkillFile.body &&
-      skillFileMetadataEquals(nextMetadata, getSkillFileMetadata(skill))
-    ) {
+    if (!(hasResourceChanges || hasSkillFileChanges)) {
       throw skillErrors.emptySkillPatch();
     }
 
-    const skillFileContent = serializeSkillFile(
-      nextMetadata,
-      nextBody,
-      currentSkillFile.frontmatter
-    );
-    const nextSkillFile = parseSkillFile(skillFileContent);
-    const skillFile =
-      await this.resourceManifest.storeSkillFile(skillFileContent);
+    const { frontmatter, skillFile } = hasSkillFileChanges
+      ? await this.storePatchedSkillFile(skill, nextMetadata, input)
+      : {
+          frontmatter: skill.frontmatter ?? {},
+          skillFile: {
+            mediaType: markdownMediaType,
+            path: skillContentPath,
+            sha256: skill.skillFileSha256,
+            size: skill.skillFileSize,
+          },
+        };
     const resources = await this.resourceManifest.patchSnapshot(
       currentResources,
       input
@@ -359,7 +384,7 @@ export class SkillService {
         skillFile,
         skillFileMetadata: {
           ...nextMetadata,
-          frontmatter: nextSkillFile.frontmatter,
+          frontmatter,
         },
         skillPk: skill.pk,
       },
@@ -374,6 +399,24 @@ export class SkillService {
       metadata: updatedSkill.metadata,
       name: updatedSkill.name,
     };
+  }
+
+  private async storePatchedSkillFile(
+    skill: SkillRow,
+    metadata: SkillFileMetadata,
+    input: PatchSkillServiceInput
+  ) {
+    const currentSkillFile = await this.readSkillFileSnapshot(skill);
+    const skillFileContent = serializeSkillFile(
+      metadata,
+      input.content ?? currentSkillFile.body,
+      currentSkillFile.frontmatter
+    );
+    const nextSkillFile = parseSkillFile(skillFileContent);
+    const skillFile =
+      await this.resourceManifest.storeSkillFile(skillFileContent);
+
+    return { frontmatter: nextSkillFile.frontmatter, skillFile };
   }
 
   async deleteSkill(skillPk: number) {
@@ -495,16 +538,18 @@ export class SkillService {
     return this.resolveSkill(skill.pk);
   }
 
-  private async readCurrentSkillFile(skill: SkillRow) {
+  private async readSkillFileSnapshot(skill: SkillRow) {
     const object = await this.resourceManifest.getObjectBySha256(
       skill.skillFileSha256
     );
-    const parsed = parseSkillFile(await object.text());
+    const content = await object.text();
+    const parsed = parseSkillFile(content);
 
     return {
       ...parsed,
       allowedTools: skill.allowedTools,
       compatibility: skill.compatibility,
+      content,
       description: skill.description,
       license: skill.license,
       metadata: skill.metadata,

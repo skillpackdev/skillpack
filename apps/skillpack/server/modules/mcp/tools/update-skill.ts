@@ -86,6 +86,12 @@ type UpdateSkillMcpInput = Omit<
   "skillName"
 >;
 
+const patchField = <T>(
+  input: Record<string, unknown>,
+  key: string,
+  fallback: T
+): T => (Object.hasOwn(input, key) ? (input[key] as T) : fallback);
+
 const toPatchSkillInput = (input: UpdateSkillMcpInput) => {
   const skillFileResource = input.upsertResources.find(
     (resource) => resource.path === skillContentPath
@@ -99,13 +105,21 @@ const toPatchSkillInput = (input: UpdateSkillMcpInput) => {
 
   return {
     ...input,
-    allowedTools: input.allowedTools ?? parsedSkillFile.allowedTools,
-    compatibility: input.compatibility ?? parsedSkillFile.compatibility,
+    allowedTools: patchField(
+      input,
+      "allowedTools",
+      parsedSkillFile.allowedTools
+    ),
+    compatibility: patchField(
+      input,
+      "compatibility",
+      parsedSkillFile.compatibility
+    ),
     content: parsedSkillFile.body,
-    description: input.description ?? parsedSkillFile.description,
-    license: input.license ?? parsedSkillFile.license,
-    metadata: input.metadata ?? parsedSkillFile.metadata,
-    name: input.name ?? parsedSkillFile.name,
+    description: patchField(input, "description", parsedSkillFile.description),
+    license: patchField(input, "license", parsedSkillFile.license),
+    metadata: patchField(input, "metadata", parsedSkillFile.metadata),
+    name: patchField(input, "name", parsedSkillFile.name),
     upsertResources: input.upsertResources.filter(
       (resource) => resource.path !== skillContentPath
     ),

@@ -55,6 +55,14 @@ const resourceRow = (input?: Partial<SkillResourceRow>): SkillResourceRow => ({
   versionPk: input?.versionPk ?? 10,
 });
 
+const currentState = (input?: {
+  resources?: SkillResourceRow[];
+  skill?: SkillRow;
+}) => ({
+  resources: input?.resources ?? [resourceRow()],
+  skill: input?.skill ?? skillRow(),
+});
+
 const storedResource = (
   input?: Partial<StoredResourceObject>
 ): StoredResourceObject => ({
@@ -69,10 +77,6 @@ const objectWithText = (text: string) =>
     size: text.length,
     text: () => Promise.resolve(text),
   }) as R2ObjectBody;
-
-const missingSkill = null as unknown as Awaited<
-  ReturnType<SkillRepository["findSkillByPk"]>
->;
 
 const originDefinition = (input?: {
   content?: string;
@@ -103,6 +107,10 @@ const createService = () => {
     findResourceByPath: vi.fn<SkillRepository["findResourceByPath"]>(),
     findSkillByName: vi.fn<SkillRepository["findSkillByName"]>(),
     findSkillByPk: vi.fn<SkillRepository["findSkillByPk"]>(),
+    findSkillWithCurrentAttachedResourcesByName:
+      vi.fn<SkillRepository["findSkillWithCurrentAttachedResourcesByName"]>(),
+    findSkillWithCurrentAttachedResourcesByPk:
+      vi.fn<SkillRepository["findSkillWithCurrentAttachedResourcesByPk"]>(),
     findVersionResourceBySelector:
       vi.fn<SkillRepository["findVersionResourceBySelector"]>(),
     listResourcesBySkillPk: vi.fn<SkillRepository["listResourcesBySkillPk"]>(),
@@ -140,20 +148,27 @@ describe("SkillService current-state lifecycle", () => {
   it("treats skills outside the owner scope as not found", async () => {
     const { repository, service } = createService();
 
-    repository.findSkillByPk.mockResolvedValue(missingSkill);
+    repository.findSkillWithCurrentAttachedResourcesByPk.mockReturnValue(
+      Promise.resolve() as ReturnType<
+        SkillRepository["findSkillWithCurrentAttachedResourcesByPk"]
+      >
+    );
 
     await expect(service.resolveSkill(1)).rejects.toMatchObject({
       code: "skill-not-found",
     });
-    expect(repository.findSkillByPk).toHaveBeenCalledWith(1);
+    expect(
+      repository.findSkillWithCurrentAttachedResourcesByPk
+    ).toHaveBeenCalledWith(1);
   });
 
   it("resolves a skill by the owner's Skill Name", async () => {
     const { repository, resourceManifest, service } = createService();
     const skill = skillRow({ name: "demo-skill", pk: 9 });
 
-    repository.findSkillByName.mockResolvedValue(skill);
-    repository.listResourcesBySkillPk.mockResolvedValue([resourceRow()]);
+    repository.findSkillWithCurrentAttachedResourcesByName.mockResolvedValue(
+      currentState({ skill })
+    );
     resourceManifest.getObjectBySha256.mockResolvedValue(
       objectWithText(skillFileContent)
     );
@@ -161,8 +176,30 @@ describe("SkillService current-state lifecycle", () => {
     const result = await service.resolveSkillByName("demo-skill");
 
     expect(result.skill).toBe(skill);
-    expect(repository.findSkillByName).toHaveBeenCalledWith("demo-skill");
-    expect(repository.listResourcesBySkillPk).toHaveBeenCalledWith(9);
+    expect(
+      repository.findSkillWithCurrentAttachedResourcesByName
+    ).toHaveBeenCalledWith("demo-skill");
+    expect(repository.listResourcesBySkillPk).not.toHaveBeenCalled();
+  });
+
+  it("reads activation content as the canonical SKILL.md file", async () => {
+    const { repository, resourceManifest, service } = createService();
+    const skill = skillRow({ name: "demo-skill", pk: 9 });
+
+    repository.findSkillWithCurrentAttachedResourcesByName.mockResolvedValue(
+      currentState({ skill })
+    );
+    resourceManifest.getObjectBySha256.mockResolvedValue(
+      objectWithText(skillFileContent)
+    );
+
+    const result = await service.readSkillActivationByName("demo-skill");
+
+    expect(result.skillFileContent).toBe(skillFileContent);
+    expect(result.resources).toStrictEqual([resourceRow()]);
+    expect(
+      repository.findSkillWithCurrentAttachedResourcesByName
+    ).toHaveBeenCalledWith("demo-skill");
   });
 
   it("serializes canonical SKILL.md before creating current Skill state", async () => {
@@ -178,8 +215,9 @@ describe("SkillService current-state lifecycle", () => {
       size: 120,
     });
     resourceManifest.createSnapshot.mockResolvedValue(manifest);
-    repository.findSkillByPk.mockResolvedValue(skill);
-    repository.listResourcesBySkillPk.mockResolvedValue([resourceRow()]);
+    repository.findSkillWithCurrentAttachedResourcesByPk.mockResolvedValue(
+      currentState({ skill })
+    );
     resourceManifest.getObjectBySha256.mockResolvedValue(
       objectWithText(skillFileContent)
     );
@@ -228,8 +266,9 @@ describe("SkillService current-state lifecycle", () => {
       }),
     ];
 
-    repository.findSkillByPk.mockResolvedValue(currentSkill);
-    repository.listResourcesBySkillPk.mockResolvedValue(currentResources);
+    repository.findSkillWithCurrentAttachedResourcesByPk.mockResolvedValue(
+      currentState({ resources: currentResources, skill: currentSkill })
+    );
     resourceManifest.getObjectBySha256.mockResolvedValue(
       objectWithText(skillFileContent)
     );
@@ -269,14 +308,61 @@ describe("SkillService current-state lifecycle", () => {
     );
   });
 
+  it("patches attached resources without reading or rewriting SKILL.md", async () => {
+    const { repository, resourceManifest, service } = createService();
+    const currentSkill = skillRow({
+      frontmatter: { "x-agent": "pi" },
+      skillFileSha256: "current-skill-md",
+      skillFileSize: 88,
+    });
+    const currentResources = [resourceRow()];
+    const nextResources = [
+      storedResource({
+        path: "references/guide.md",
+        sha256: "guide-next",
+      }),
+    ];
+
+    repository.findSkillWithCurrentAttachedResourcesByPk.mockResolvedValue(
+      currentState({ resources: currentResources, skill: currentSkill })
+    );
+    resourceManifest.patchSnapshot.mockResolvedValue(nextResources);
+    repository.updateSkillState.mockResolvedValue(currentSkill);
+
+    await service.patchSkill(currentSkill.pk, {
+      deleteResourcePaths: [],
+      upsertResources: [
+        {
+          content: "guide",
+          path: "references/guide.md",
+        },
+      ],
+    });
+
+    expect(resourceManifest.getObjectBySha256).not.toHaveBeenCalled();
+    expect(resourceManifest.storeSkillFile).not.toHaveBeenCalled();
+    expect(repository.updateSkillState).toHaveBeenCalledWith(
+      expect.objectContaining({
+        resources: nextResources,
+        skillFile: expect.objectContaining({
+          path: "SKILL.md",
+          sha256: "current-skill-md",
+          size: 88,
+        }),
+        skillFileMetadata: expect.objectContaining({
+          frontmatter: { "x-agent": "pi" },
+        }),
+      }),
+      expect.any(Date)
+    );
+  });
+
   it("rejects patches that do not change Skill state or resources", async () => {
     const { repository, resourceManifest, service } = createService();
     const currentSkill = skillRow();
 
-    repository.findSkillByPk.mockResolvedValue(currentSkill);
-    repository.listResourcesBySkillPk.mockResolvedValue([resourceRow()]);
-    resourceManifest.getObjectBySha256.mockResolvedValue(
-      objectWithText(skillFileContent)
+    repository.findSkillWithCurrentAttachedResourcesByPk.mockResolvedValue(
+      currentState({ skill: currentSkill })
     );
 
     await expect(
@@ -386,7 +472,9 @@ describe("SkillService current-state lifecycle", () => {
     const restoredSkill = skillRow({ description: "Restored" });
 
     repository.restoreVersion.mockResolvedValue(restoredSkill);
-    repository.listResourcesBySkillPk.mockResolvedValue([resourceRow()]);
+    repository.findSkillWithCurrentAttachedResourcesByPk.mockResolvedValue(
+      currentState({ skill: restoredSkill })
+    );
     resourceManifest.getObjectBySha256.mockResolvedValue(
       objectWithText(skillFileContent)
     );
@@ -413,13 +501,14 @@ describe("SkillService current-state lifecycle", () => {
       { definition: originDefinition(), status: "resolved" },
     ]);
     repository.findSkillByName.mockResolvedValue(existingSkill);
-    repository.listResourcesBySkillPk.mockResolvedValue([resourceRow()]);
     resourceManifest.storeSkillFile.mockResolvedValue(
       storedResource({ path: "SKILL.md" })
     );
     resourceManifest.createSnapshot.mockResolvedValue([]);
     repository.updateSkillState.mockResolvedValue(existingSkill);
-    repository.findSkillByPk.mockResolvedValue(existingSkill);
+    repository.findSkillWithCurrentAttachedResourcesByPk.mockResolvedValue(
+      currentState({ skill: existingSkill })
+    );
     resourceManifest.getObjectBySha256.mockResolvedValue(
       objectWithText(skillFileContent)
     );

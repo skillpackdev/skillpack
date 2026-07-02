@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getMcpOAuthResource, getOAuthResource } from "./oauth-audience";
+import { getOAuthResource } from "./oauth-audience";
 
 const baseEnv = {
   BETTER_AUTH_SECRET: "test-secret",
@@ -25,17 +25,5 @@ describe("OAuth resource", () => {
         "http://localhost:5173"
       )
     ).toBe("https://skillpack.example");
-  });
-
-  it("appends /mcp to the base resource", () => {
-    expect(getMcpOAuthResource(baseEnv, "http://localhost:5173")).toBe(
-      "http://localhost:5173/mcp"
-    );
-  });
-
-  it("does not double the trailing slash when origin already has one", () => {
-    expect(getMcpOAuthResource(baseEnv, "http://localhost:5173/")).toBe(
-      "http://localhost:5173/mcp"
-    );
   });
 });

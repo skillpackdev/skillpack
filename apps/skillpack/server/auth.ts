@@ -2,7 +2,7 @@ import { oauthProvider } from "@better-auth/oauth-provider";
 import { betterAuth } from "better-auth";
 import { genericOAuth, jwt } from "better-auth/plugins";
 
-import { getMcpOAuthResource } from "./oauth-audience";
+import { getOAuthResource } from "./oauth-audience";
 
 export const skillReadScope = "skills:read";
 export const skillWriteScope = "skills:write";
@@ -118,7 +118,7 @@ export const createAuth = (env: Env, origin: string) => {
           oauthAuthServerConfig: true,
           openidConfig: true,
         },
-        validAudiences: [getMcpOAuthResource(env, origin)],
+        validAudiences: [getOAuthResource(env, origin)],
       }),
       ...(oidcConfig
         ? [

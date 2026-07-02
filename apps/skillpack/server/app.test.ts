@@ -289,7 +289,7 @@ describe("app MCP auth", () => {
     await expect(response.json()).resolves.toMatchObject({
       authorization_servers: ["http://localhost"],
       bearer_methods_supported: ["header"],
-      resource: "http://localhost/mcp",
+      resource: "http://localhost",
       resource_name: "Skillpack MCP Server",
       scopes_supported: ["offline_access", "skills:read", "skills:write"],
     });
@@ -728,10 +728,9 @@ describe("app MCP auth", () => {
     const createdAt = new Date("2026-05-25T12:00:00.000Z");
     const readSkillTextFileByName =
       vi.fn<SkillService["readSkillTextFileByName"]>();
-    const resolveSkillByName = vi
-      .fn<SkillService["resolveSkillByName"]>()
+    const readSkillActivationByName = vi
+      .fn<SkillService["readSkillActivationByName"]>()
       .mockResolvedValue({
-        content: "---\nname: demo-skill\n---\n\n# Demo\n\nUse this.\n",
         resources: [
           {
             createdAt,
@@ -761,13 +760,15 @@ describe("app MCP auth", () => {
           updatedAt: createdAt,
           versionId: "version-current",
         },
+        skillFileContent:
+          "---\nname: demo-skill\ndescription: Demo skill\n---\n\n# Demo\n\nUse this.\n",
       });
     const app = createApp({
       getSkillReadBearerUserId: vi
         .fn<VerifySkillReadBearerUserId>()
         .mockResolvedValue("user-oauth"),
       setSkillServicesForUser: setSkillServicesForUser(
-        { readSkillTextFileByName, resolveSkillByName },
+        { readSkillActivationByName, readSkillTextFileByName },
         []
       ),
     });
@@ -800,12 +801,77 @@ describe("app MCP auth", () => {
     };
     expect(body.result.content).toStrictEqual([
       {
-        text: '<skill>\n---\nname: demo-skill\n---\n\n# Demo\n\nUse this.\n\n<resources>\n  <resource path="references/demo.md" uri="skill://demo-skill/references/demo.md" media_type="text/markdown" size="12" />\n</resources>\n</skill>',
+        text: '<skill>\n---\nname: demo-skill\ndescription: Demo skill\n---\n\n# Demo\n\nUse this.\n\n<resources>\n  <resource path="references/demo.md" uri="skill://demo-skill/references/demo.md" media_type="text/markdown" size="12" />\n</resources>\n</skill>',
         type: "text",
       },
     ]);
-    expect(resolveSkillByName).toHaveBeenCalledWith("demo-skill");
+    expect(readSkillActivationByName).toHaveBeenCalledWith("demo-skill");
     expect(readSkillTextFileByName).not.toHaveBeenCalled();
+  });
+
+  it("keeps explicit null fields when update_skill also uploads SKILL.md", async () => {
+    const patchSkillByName = vi
+      .fn<SkillService["patchSkillByName"]>()
+      .mockResolvedValue({
+        allowedTools: null,
+        compatibility: null,
+        description: "Uploaded description",
+        license: null,
+        metadata: null,
+        name: "demo-skill",
+      });
+    const app = createApp({
+      getApiKeyUserId: vi
+        .fn<VerifyApiKeyUserId>()
+        .mockResolvedValue("user-api-key"),
+      setSkillServicesForUser: setSkillServicesForUser(
+        { patchSkillByName },
+        []
+      ),
+    });
+
+    const response = await app.request(
+      "/mcp",
+      {
+        body: JSON.stringify({
+          id: 15,
+          jsonrpc: "2.0",
+          method: "tools/call",
+          params: {
+            arguments: {
+              license: null,
+              metadata: null,
+              skillName: "demo-skill",
+              upsertResources: [
+                {
+                  content:
+                    "---\nname: demo-skill\ndescription: Uploaded description\nlicense: Apache-2.0\nmetadata:\n  author: acme\n---\n\n# Demo\n",
+                  path: "SKILL.md",
+                },
+              ],
+            },
+            name: "update_skill",
+          },
+        }),
+        headers: {
+          accept: "application/json",
+          authorization: "Bearer skp_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+          "content-type": "application/json",
+        },
+        method: "POST",
+      },
+      testEnv
+    );
+
+    expect(response.status).toBe(200);
+    expect(patchSkillByName).toHaveBeenCalledWith(
+      "demo-skill",
+      expect.objectContaining({
+        description: "Uploaded description",
+        license: null,
+        metadata: null,
+      })
+    );
   });
 
   it("rejects descendant SKILL.md resource URIs before service lookup", async () => {

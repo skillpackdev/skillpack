@@ -2,9 +2,9 @@ import { oauthProviderResourceClient } from "@better-auth/oauth-provider/resourc
 import { verifyJwsAccessToken } from "better-auth/oauth2";
 
 import { createAuth, skillReadScope, skillWriteScope } from "./auth";
-import { getMcpOAuthResource, getOAuthResource } from "./oauth-audience";
+import { getOAuthResource } from "./oauth-audience";
 
-export { getMcpOAuthResource, getOAuthResource } from "./oauth-audience";
+export { getOAuthResource } from "./oauth-audience";
 
 export const getRequestOrigin = (url: string) => new URL(url).origin;
 
@@ -79,7 +79,7 @@ export const getMcpSkillReadBearerAccess = (
   env: Env,
   origin: string,
   headers: Headers
-) => getBearerAccess(env, origin, headers, getMcpOAuthResource(env, origin));
+) => getBearerAccess(env, origin, headers, getOAuthResource(env, origin));
 
 export const getSkillReadBearerUserId = async (
   env: Env,
@@ -130,7 +130,7 @@ export const getMcpProtectedResourceMetadata = async (
   origin: string
 ) => {
   const resourceClient = oauthProviderResourceClient();
-  const resource = getMcpOAuthResource(env, origin);
+  const resource = getOAuthResource(env, origin);
   const authorizationServer = new URL("/", resource).href.replace(/\/$/u, "");
 
   return await resourceClient.getActions().getProtectedResourceMetadata(

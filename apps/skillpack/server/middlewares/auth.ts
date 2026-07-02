@@ -6,7 +6,6 @@ import { SkillRepository } from "@server/modules/skills/repository";
 import { ResourceManifest } from "@server/modules/skills/resource-manifest";
 import { SkillService } from "@server/modules/skills/service";
 import {
-  getMcpOAuthResource,
   getMcpSkillReadBearerAccess,
   getMcpSkillReadBearerUserId,
   getOAuthResource,
@@ -190,16 +189,10 @@ export const createRequireMcpAuth = (
   return createMiddleware<AppBindings>(async (c, next) => {
     const requestOrigin = getRequestOrigin(c.req.url);
     const resource = getOAuthResource(c.env, requestOrigin);
-    const mcpResource = getMcpOAuthResource(c.env, requestOrigin);
     const challenge = `Bearer realm="mcp", resource_metadata="${resource}/.well-known/oauth-protected-resource/mcp", scope="${skillpackOAuthScopes.join(" ")}"`;
     const origin = c.req.header("origin");
 
-    if (
-      origin &&
-      origin !== requestOrigin &&
-      origin !== resource &&
-      origin !== mcpResource
-    ) {
+    if (origin && origin !== requestOrigin && origin !== resource) {
       return c.json({ error: "Forbidden" }, 403);
     }
 
