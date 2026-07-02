@@ -129,14 +129,8 @@ export class SkillService {
   async readSkillResource(
     input: ReadSkillFileInput
   ): Promise<ReadSkillFileResult> {
-    const skill = await this.repository.findSkillByPk(input.skillPk);
-
-    if (!skill) {
-      throw skillErrors.skillNotFound();
-    }
-
     const resource = await this.repository.findResourceByPath(
-      skill.pk,
+      input.skillPk,
       input.path
     );
 
@@ -163,16 +157,18 @@ export class SkillService {
   async readSkillResourceByName(
     input: ReadSkillFileByNameInput
   ): Promise<ReadSkillFileResult> {
-    const skill = await this.repository.findSkillByName(input.skillName);
+    const resource = await this.repository.findResourceByName(
+      input.skillName,
+      input.path
+    );
 
-    if (!skill) {
-      throw skillErrors.skillNotFound();
+    if (!resource) {
+      throw skillErrors.skillFileNotFound();
     }
 
-    return await this.readSkillResource({
-      path: input.path,
-      skillPk: skill.pk,
-    });
+    const object = await this.resourceManifest.getResourceObject(resource);
+
+    return { object, resource };
   }
 
   async readSkillTextFileByName(
