@@ -17,6 +17,7 @@
     "@earendil-works/pi-ai": "^0.75.3",
     "@earendil-works/pi-coding-agent": "^0.75.3",
     "@skillpack/contracts": "workspace:*",
+    "@skillpack/core": "workspace:*",
     "typebox": "^1.1.38"
   },
   "devDependencies": {

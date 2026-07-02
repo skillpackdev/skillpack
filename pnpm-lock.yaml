@@ -290,6 +290,9 @@ importers:
       '@skillpack/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@skillpack/core':
+        specifier: workspace:*
+        version: link:../core
       typebox:
         specifier: ^1.1.38
         version: 1.1.38

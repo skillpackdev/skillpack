@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./primitives": "./src/primitives.ts"
+    "./primitives": "./src/primitives.ts",
+    "./skill-locations": "./src/skill-locations.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit --project tsconfig.json --pretty false"

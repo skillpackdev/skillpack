@@ -1,18 +1,16 @@
-export interface SkillpackLocation {
-  path: string;
-  skillName: string;
-}
+import {
+  parseSkillResourceUri,
+  skillFilePath,
+  toSkillLocation,
+  toSkillResourceUri,
+} from "@skillpack/core/skill-locations";
 
 export interface SkillpackCatalogItem {
   description: string;
   name: string;
 }
 
-export const skillFilePath = "SKILL.md";
-
-const skillUriPrefix = "skill://";
-const skillNamePattern = /^(?=.*[a-z])[a-z0-9]+(?:-[a-z0-9]+)*$/u;
-const expectedSkillpackLocation = "Expected skill://{skillName}/{path}";
+export { skillFilePath };
 
 export const escapeXml = (value: string) =>
   value
@@ -22,74 +20,9 @@ export const escapeXml = (value: string) =>
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&apos;");
 
-const decodePathSegment = (segment: string) => {
-  try {
-    return decodeURIComponent(segment);
-  } catch {
-    throw new Error(expectedSkillpackLocation);
-  }
-};
-
-const parseSkillName = (value: string) => {
-  if (!skillNamePattern.test(value)) {
-    throw new Error(expectedSkillpackLocation);
-  }
-
-  return value;
-};
-
-const isSafeRelativePath = (path: string) =>
-  !path.startsWith("/") &&
-  !path.includes("\\") &&
-  path.split("/").every((part) => part && part !== "." && part !== "..");
-
-const parseSkillResourcePath = (path: string) => {
-  if (
-    !isSafeRelativePath(path) ||
-    (path !== skillFilePath && path.split("/").includes(skillFilePath))
-  ) {
-    throw new Error(expectedSkillpackLocation);
-  }
-
-  return path;
-};
-
-const encodePath = (path: string) =>
-  path.split("/").map(encodeURIComponent).join("/");
-
-export const toSkillpackResourceLocation = (
-  skillName: string,
-  path = skillFilePath
-) => `skill://${skillName}/${encodePath(path)}`;
-
-export const toSkillpackLocation = (skillName: string) =>
-  toSkillpackResourceLocation(skillName, skillFilePath);
-
-export const parseSkillpackLocation = (location: string): SkillpackLocation => {
-  if (
-    !location.startsWith(skillUriPrefix) ||
-    location.includes("?") ||
-    location.includes("#")
-  ) {
-    throw new Error(expectedSkillpackLocation);
-  }
-
-  const segments = location.slice(skillUriPrefix.length).split("/");
-  if (segments.length < 2) {
-    throw new Error(expectedSkillpackLocation);
-  }
-
-  const [rawSkillName, ...rawPathSegments] = segments;
-  const path = rawPathSegments.map(decodePathSegment).join("/");
-  if (!path) {
-    throw new Error(expectedSkillpackLocation);
-  }
-
-  return {
-    path: parseSkillResourcePath(path),
-    skillName: parseSkillName(decodePathSegment(rawSkillName)),
-  };
-};
+export const toSkillpackResourceLocation = toSkillResourceUri;
+export const toSkillpackLocation = toSkillLocation;
+export const parseSkillpackLocation = parseSkillResourceUri;
 
 export const formatSkillpackCatalog = (skills: SkillpackCatalogItem[]) => {
   if (skills.length === 0) {
