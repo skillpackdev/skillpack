@@ -1,28 +1,12 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-
 import { createDb } from "@server/db/client";
 import { apiKeysTable } from "@server/db/schema";
+import { applyMigration } from "@server/test/migrations";
 import { eq } from "drizzle-orm";
 import { Miniflare } from "miniflare";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { ApiKeyRepository } from "./repository";
 import { ApiKeyService } from "./service";
-
-const splitSqlStatements = (sql: string) =>
-  sql
-    .split(";")
-    .map((statement) => statement.trim())
-    .filter(Boolean);
-
-const applyMigration = async (db: D1Database, path: string) => {
-  const sql = await readFile(path, "utf-8");
-
-  for (const statement of splitSqlStatements(sql)) {
-    await db.prepare(statement).run();
-  }
-};
 
 describe("API key service", () => {
   let mf: Miniflare;
@@ -37,10 +21,7 @@ describe("API key service", () => {
     });
 
     const d1 = (await mf.getD1Database("DB")) as unknown as D1Database;
-    await applyMigration(
-      d1,
-      join(process.cwd(), "migrations/0002_api_keys.sql")
-    );
+    await applyMigration(d1, "0002_api_keys.sql");
 
     db = createDb(d1);
     service = new ApiKeyService(new ApiKeyRepository(db));

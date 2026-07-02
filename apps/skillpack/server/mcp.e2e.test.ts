@@ -1,7 +1,5 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-
 import { createDb } from "@server/db/client";
+import { applyFreshSchema } from "@server/test/migrations";
 import type { AppBindings } from "@server/types";
 import type { Context } from "hono";
 import { Miniflare } from "miniflare";
@@ -11,32 +9,6 @@ import { createApp } from "./app";
 import { SkillRepository } from "./modules/skills/repository";
 import { ResourceManifest } from "./modules/skills/resource-manifest";
 import { SkillService } from "./modules/skills/service";
-
-const splitSqlStatements = (sql: string) =>
-  sql
-    .split(";")
-    .map((statement) => statement.trim())
-    .filter(Boolean);
-
-const applyMigration = async (db: D1Database, path: string) => {
-  const sql = await readFile(path, "utf-8");
-
-  for (const statement of splitSqlStatements(sql)) {
-    await db.prepare(statement).run();
-  }
-};
-
-const applyFreshSchema = async (db: D1Database) => {
-  for (const migration of [
-    "0000_initial.sql",
-    "0001_better_auth_oauth_provider.sql",
-    "0002_api_keys.sql",
-    "0003_skill_version_history.sql",
-    "0004_inline_skill_version_snapshots.sql",
-  ]) {
-    await applyMigration(db, join(process.cwd(), "migrations", migration));
-  }
-};
 
 const apiKeySecret = `skp_${"a".repeat(40)}`;
 

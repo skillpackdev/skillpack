@@ -1,47 +1,18 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-
 import { createDb } from "@server/db/client";
 import { skillVersionLabelsTable, skillVersionsTable } from "@server/db/schema";
 import { skillContentPath } from "@server/modules/skills/storage";
+import {
+  applyMigration,
+  applyMigrations,
+  currentMigrations,
+  migrationsThroughVersionHistory,
+} from "@server/test/migrations";
 import { eq } from "drizzle-orm";
 import { Miniflare } from "miniflare";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { SkillRepository } from "./repository";
 import type { StoredResourceObject } from "./types";
-
-const splitSqlStatements = (sql: string) =>
-  sql
-    .split(";")
-    .map((statement) => statement.trim())
-    .filter(Boolean);
-
-const migrationsThroughVersionHistory = [
-  "0000_initial.sql",
-  "0001_better_auth_oauth_provider.sql",
-  "0002_api_keys.sql",
-  "0003_skill_version_history.sql",
-];
-
-const currentMigrations = [
-  ...migrationsThroughVersionHistory,
-  "0004_inline_skill_version_snapshots.sql",
-];
-
-const applyMigration = async (db: D1Database, path: string) => {
-  const sql = await readFile(path, "utf-8");
-
-  for (const statement of splitSqlStatements(sql)) {
-    await db.prepare(statement).run();
-  }
-};
-
-const applyMigrations = async (db: D1Database, migrations: string[]) => {
-  for (const migration of migrations) {
-    await applyMigration(db, join(process.cwd(), "migrations", migration));
-  }
-};
 
 const skillFile = (suffix: string): StoredResourceObject => ({
   mediaType: "text/markdown; charset=utf-8",
@@ -117,14 +88,7 @@ describe("skill repository migrations", () => {
           "INSERT INTO skill_version_resources (version_pk, path, sha256, media_type, size, created_at) VALUES (10, 'SKILL.md', 'skill-md-sha', 'text/markdown; charset=utf-8', 123, 1780000000000), (10, 'references/notes.txt', 'notes-sha', 'text/plain; charset=utf-8', 5, 1780000000000)"
         )
         .run();
-      await applyMigration(
-        d1,
-        join(
-          process.cwd(),
-          "migrations",
-          "0004_inline_skill_version_snapshots.sql"
-        )
-      );
+      await applyMigration(d1, "0004_inline_skill_version_snapshots.sql");
 
       const repository = new SkillRepository(createDb(d1), "user-a");
       const skill = await repository.findSkillByName("demo");
