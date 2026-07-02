@@ -32,7 +32,8 @@ export const registerReadSkillTool = (
     readSkillToolDefinition,
     async (rawInput) => {
       const { name } = readSkillMcpSchema.parse(rawInput);
-      const resolvedSkill = await context.skillService.resolveSkillByName(name);
+      const resolvedSkill =
+        await context.skillService.resolveSkillManifestByName(name);
       const skillFile = await context.skillService.readSkillTextFileByName({
         path: skillContentPath,
         skillName: name,

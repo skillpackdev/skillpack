@@ -16,6 +16,8 @@ import type {
   SkillRow,
   SkillVersionLabelResult,
   SkillVersionRow,
+  SkillWithCurrentResource,
+  SkillWithCurrentResources,
   SkillWithCurrentState,
   StoredResourceObject,
 } from "./types";
@@ -99,6 +101,75 @@ export class SkillRepository {
     return rows.map(({ skill, version }) => ({
       skill: toSkillRow(skill, version),
     }));
+  }
+
+  async listSkillsWithCurrentResource(
+    path: string
+  ): Promise<SkillWithCurrentResource[]> {
+    const rows = await this.db
+      .select({
+        resource: skillVersionResourcesTable,
+        skill: skillsTable,
+        version: skillVersionsTable,
+      })
+      .from(skillsTable)
+      .innerJoin(
+        skillVersionsTable,
+        sqlEq(skillsTable.headVersionPk, skillVersionsTable.pk)
+      )
+      .innerJoin(
+        skillVersionResourcesTable,
+        and(
+          sqlEq(skillVersionResourcesTable.versionPk, skillVersionsTable.pk),
+          sqlEq(skillVersionResourcesTable.path, path)
+        )
+      )
+      .where(sqlEq(skillsTable.ownerUserId, this.ownerUserId))
+      .orderBy(desc(skillsTable.updatedAt));
+
+    return rows.map(({ resource, skill, version }) => ({
+      resource: { ...resource, skillPk: skill.pk },
+      skill: toSkillRow(skill, version),
+    }));
+  }
+
+  async listSkillsWithCurrentResources(): Promise<SkillWithCurrentResources[]> {
+    const rows = await this.db
+      .select({
+        resource: skillVersionResourcesTable,
+        skill: skillsTable,
+        version: skillVersionsTable,
+      })
+      .from(skillsTable)
+      .innerJoin(
+        skillVersionsTable,
+        sqlEq(skillsTable.headVersionPk, skillVersionsTable.pk)
+      )
+      .innerJoin(
+        skillVersionResourcesTable,
+        sqlEq(skillVersionResourcesTable.versionPk, skillVersionsTable.pk)
+      )
+      .where(sqlEq(skillsTable.ownerUserId, this.ownerUserId))
+      .orderBy(desc(skillsTable.updatedAt));
+
+    const skillsByPk = new Map<number, SkillWithCurrentResources>();
+
+    for (const { resource, skill, version } of rows) {
+      const existing = skillsByPk.get(skill.pk);
+      const currentResource = { ...resource, skillPk: skill.pk };
+
+      if (existing) {
+        existing.resources.push(currentResource);
+        continue;
+      }
+
+      skillsByPk.set(skill.pk, {
+        resources: [currentResource],
+        skill: toSkillRow(skill, version),
+      });
+    }
+
+    return [...skillsByPk.values()];
   }
 
   async findSkillByPk(skillPk: number) {

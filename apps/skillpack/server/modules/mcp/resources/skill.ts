@@ -34,15 +34,12 @@ export const registerSkillResource = (
     "skill_resource",
     new ResourceTemplate("skill://{skillName}/{+path}", {
       list: async () => {
-        const skills = await context.skillService.listSkills();
+        const skills =
+          await context.skillService.listSkillsWithCurrentResources();
         const resources: ListedMcpResource[] = [];
 
-        for (const { skill } of skills) {
-          const resolvedSkill = await context.skillService.resolveSkillByName(
-            skill.name
-          );
-
-          for (const resource of resolvedSkill.resources) {
+        for (const { resources: skillResources, skill } of skills) {
+          for (const resource of skillResources) {
             const isSkillFile = resource.path === skillContentPath;
             resources.push({
               description: isSkillFile ? skill.description : undefined,

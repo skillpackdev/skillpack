@@ -38,6 +38,14 @@ export interface SkillWithCurrentState {
   skill: SkillRow;
 }
 
+export interface SkillWithCurrentResource extends SkillWithCurrentState {
+  resource: SkillResourceRow;
+}
+
+export interface SkillWithCurrentResources extends SkillWithCurrentState {
+  resources: SkillResourceRow[];
+}
+
 export interface ResolvedSkillResult extends SkillWithCurrentState {
   content: string;
   resources: SkillResourceRow[];
