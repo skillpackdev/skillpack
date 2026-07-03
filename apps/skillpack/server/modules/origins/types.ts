@@ -6,6 +6,7 @@ import type {
   OriginSkillCandidate,
   ResolvedSkillOrigin,
 } from "@skillpack/contracts/origins/responses";
+import type { SkillOriginJson } from "@skillpack/contracts/skills/state";
 
 export type OriginSelection = OriginSelectionInput;
 export type SkillOrigin = SkillOriginInput;
@@ -16,10 +17,9 @@ export interface OriginResourceDefinition {
   path: string;
 }
 
-export interface OriginProvenance {
-  kind: "github";
+/** Stored origin shape with metadata guaranteed by the origin adapter. */
+export interface OriginProvenance extends Omit<SkillOriginJson, "metadata"> {
   metadata: Record<string, unknown>;
-  url: string;
 }
 
 export interface OriginSkillDefinition {

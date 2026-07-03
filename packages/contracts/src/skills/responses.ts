@@ -10,12 +10,7 @@ import {
 import { z } from "zod";
 
 import { originSelectionSchema } from "../origins/requests";
-
-const skillOriginSummarySchema = z.object({
-  kind: z.literal("github"),
-  metadata: z.record(z.unknown()).nullable(),
-  url: z.string().url(),
-});
+import { skillOriginJsonSchema } from "./state";
 
 export const resourceManifestItemSchema = z.object({
   mediaType: z.string().min(1),
@@ -32,7 +27,7 @@ export const skillListItemSchema = z.object({
   license: skillLicenseSchema.nullable(),
   metadata: skillMetadataSchema.nullable(),
   name: skillNameSchema,
-  origin: skillOriginSummarySchema.optional(),
+  origin: skillOriginJsonSchema.optional(),
   updatedAt: z.string().datetime(),
 });
 
@@ -49,7 +44,7 @@ export const resolvedSkillSchema = z.object({
   license: skillLicenseSchema.nullable(),
   metadata: skillMetadataSchema.nullable(),
   name: skillNameSchema,
-  origin: skillOriginSummarySchema.optional(),
+  origin: skillOriginJsonSchema.optional(),
   resources: z.array(resourceManifestItemSchema),
   updatedAt: z.string().datetime(),
 });

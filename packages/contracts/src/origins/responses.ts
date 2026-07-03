@@ -80,9 +80,6 @@ export const readSkillDefinitionsResponseSchema = z.object({
 export type DiscoverSkillsResponse = z.infer<
   typeof discoverSkillsResponseSchema
 >;
-export type OriginDefinitionResource = z.infer<
-  typeof originDefinitionResourceSchema
->;
 export type OriginSkillDefinitionPreview = z.infer<
   typeof originSkillDefinitionSchema
 >;
