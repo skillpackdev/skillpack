@@ -1,3 +1,5 @@
+import { setTimeout as sleep } from "node:timers/promises";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -342,7 +344,7 @@ describe("GitHub Origin retrieval", () => {
 
           inFlight += 1;
           maxInFlight = Math.max(maxInFlight, inFlight);
-          await Promise.resolve();
+          await sleep(1);
           inFlight -= 1;
 
           return files[blobSha] ?? "";

@@ -3,6 +3,7 @@ import { parseSkillFile } from "@server/shared/skill-file";
 import type { SkillOriginInput } from "@skillpack/contracts/origins/requests";
 import { safeRelativePathSchema } from "@skillpack/core/primitives";
 import ky from "ky";
+import pMap from "p-map";
 
 import { originErrors } from "../errors";
 import type {
@@ -405,39 +406,19 @@ const assertForkPreflight = (
   }
 };
 
-const readResourceBatch = (
+const readResources = (
   transport: GitHubTransport,
   snapshot: GitHubOriginSnapshot,
   resourceFiles: GitHubResourceFile[]
 ) =>
-  Promise.all(
-    resourceFiles.map(async (resource) => ({
+  pMap(
+    resourceFiles,
+    async (resource) => ({
       content: await readBlobText(transport, snapshot, resource.sha),
       path: resource.path,
-    }))
+    }),
+    { concurrency: githubResourceReadConcurrency }
   );
-
-const readResources = async (
-  transport: GitHubTransport,
-  snapshot: GitHubOriginSnapshot,
-  resourceFiles: GitHubResourceFile[]
-) => {
-  const resources = [];
-
-  for (
-    let index = 0;
-    index < resourceFiles.length;
-    index += githubResourceReadConcurrency
-  ) {
-    const batch = resourceFiles.slice(
-      index,
-      index + githubResourceReadConcurrency
-    );
-    resources.push(...(await readResourceBatch(transport, snapshot, batch)));
-  }
-
-  return resources;
-};
 
 const getGitHubRequestFailureMessage = async (error: unknown) => {
   if (error instanceof Error && "response" in error) {
