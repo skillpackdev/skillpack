@@ -1,6 +1,6 @@
+import { skillContentPath } from "@server/constants";
 import { createDb } from "@server/db/client";
 import { skillVersionLabelsTable, skillVersionsTable } from "@server/db/schema";
-import { skillContentPath } from "@server/modules/skills/storage";
 import {
   applyMigration,
   applyMigrations,

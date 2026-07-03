@@ -1,15 +1,7 @@
-import { skillContentPath } from "@server/constants";
 import { digestHex } from "@server/lib/crypto";
-import {
-  getDefaultMediaType,
-  getTextSize,
-  markdownMediaType,
-} from "@server/shared/text-resource";
+import { getDefaultMediaType, getTextSize } from "@server/shared/text-resource";
 
 import type { StoredResourceObject, TextResourceInput } from "./types";
-
-export { skillContentPath };
-export { markdownMediaType };
 
 export const getResourceObjectKey = (sha256: string) =>
   `objects/sha256/${sha256}`;

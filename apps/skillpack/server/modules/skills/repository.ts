@@ -431,13 +431,15 @@ export class SkillRepository {
       return;
     }
 
-    await this.db
-      .delete(skillVersionLabelsTable)
-      .where(sqlEq(skillVersionLabelsTable.skillPk, skillPk));
-    await this.db
-      .delete(skillVersionsTable)
-      .where(sqlEq(skillVersionsTable.skillPk, skillPk));
-    await this.db.delete(skillsTable).where(sqlEq(skillsTable.pk, skillPk));
+    await this.db.batch([
+      this.db
+        .delete(skillVersionLabelsTable)
+        .where(sqlEq(skillVersionLabelsTable.skillPk, skillPk)),
+      this.db
+        .delete(skillVersionsTable)
+        .where(sqlEq(skillVersionsTable.skillPk, skillPk)),
+      this.db.delete(skillsTable).where(sqlEq(skillsTable.pk, skillPk)),
+    ]);
   }
 
   private async listCurrentVersionStates() {

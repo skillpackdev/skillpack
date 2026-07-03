@@ -1,4 +1,5 @@
 import { skillContentPath } from "@server/constants";
+import { patchedValue } from "@server/lib/patch";
 import type { OriginService } from "@server/modules/origins/service";
 import type { OriginSkillDefinition } from "@server/modules/origins/types";
 import type { SkillFileMetadata } from "@server/shared/skill-file";
@@ -35,12 +36,6 @@ const getSkillFileMetadata = (skill: SkillRow): SkillFileMetadata => ({
   metadata: skill.metadata,
   name: skill.name,
 });
-
-const patchValue = <T>(
-  input: Record<string, unknown>,
-  key: string,
-  current: T
-) => (Object.hasOwn(input, key) ? (input[key] as T) : current);
 
 const metadataEquals = (
   left: Record<string, string> | null | undefined,
@@ -297,11 +292,11 @@ export class SkillService {
   ): Promise<PatchSkillResult> {
     const { resources: currentResources, skill } = state;
     const nextMetadata = {
-      allowedTools: patchValue(input, "allowedTools", skill.allowedTools),
-      compatibility: patchValue(input, "compatibility", skill.compatibility),
+      allowedTools: patchedValue(input, "allowedTools", skill.allowedTools),
+      compatibility: patchedValue(input, "compatibility", skill.compatibility),
       description: input.description ?? skill.description,
-      license: patchValue(input, "license", skill.license),
-      metadata: patchValue(input, "metadata", skill.metadata),
+      license: patchedValue(input, "license", skill.license),
+      metadata: patchedValue(input, "metadata", skill.metadata),
       name: input.name ?? skill.name,
     };
     const hasResourceChanges =

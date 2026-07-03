@@ -1,5 +1,7 @@
+import { skillContentPath } from "@server/constants";
+import { markdownMediaType } from "@server/shared/text-resource";
+
 import { skillErrors } from "./errors";
-import { markdownMediaType, skillContentPath } from "./storage";
 import type { SkillStorage } from "./storage";
 import type {
   PatchSkillServiceInput,
@@ -44,13 +46,9 @@ export class ResourceManifest {
   ): Promise<StoredResourceObject[]> {
     validateResourcePaths(resources);
 
-    const storedResources = [];
-
-    for (const resource of resources) {
-      storedResources.push(await this.storage.putTextResource(resource));
-    }
-
-    return storedResources;
+    return await Promise.all(
+      resources.map((resource) => this.storage.putTextResource(resource))
+    );
   }
 
   storeSkillFile(content: string): Promise<StoredResourceObject> {
@@ -81,11 +79,14 @@ export class ResourceManifest {
 
     validateResourcePaths(input.upsertResources);
 
-    for (const resource of input.upsertResources) {
-      nextResources.set(
-        resource.path,
-        await this.storage.putTextResource(resource)
-      );
+    const upsertedResources = await Promise.all(
+      input.upsertResources.map((resource) =>
+        this.storage.putTextResource(resource)
+      )
+    );
+
+    for (const resource of upsertedResources) {
+      nextResources.set(resource.path, resource);
     }
 
     return [...nextResources.values()];

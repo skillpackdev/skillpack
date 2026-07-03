@@ -6,7 +6,6 @@ import { markdownMediaType } from "@server/shared/text-resource";
 import type { SkillOriginJson } from "@skillpack/contracts/skills/state";
 
 import type {
-  SkillFileResource,
   SkillIdentityRow,
   SkillResourceRow,
   SkillRow,
@@ -119,7 +118,7 @@ export const toSkillRow = (
 };
 
 export const toSkillFileResource = (
-  skill: SkillRow | { pk: number },
+  skill: { pk: number },
   version: SkillVersionStateRow
 ): SkillResourceRow => ({
   mediaType: markdownMediaType,
@@ -160,23 +159,12 @@ export const findManifestResource = (
   return resource ? { ...resource, skillPk, versionPk: version.pk } : undefined;
 };
 
-export const toSkillFileReadResource = (
-  skill: SkillRow
-): SkillFileResource => ({
-  mediaType: markdownMediaType,
-  path: skillContentPath,
-  sha256: skill.skillFileSha256,
-  size: skill.skillFileSize,
-});
-
 export const findResourceInCurrentVersion = (
   row: { skill: SkillIdentityRow; version: SkillVersionRow },
   path: string
 ) => {
-  const skill = toSkillRow(row.skill, row.version);
-
   if (path === skillContentPath) {
-    return toSkillFileReadResource(skill);
+    return toSkillFileResource(row.skill, row.version);
   }
 
   return findManifestResource(row.version, path, row.skill.pk);

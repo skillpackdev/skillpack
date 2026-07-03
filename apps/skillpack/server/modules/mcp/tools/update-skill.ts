@@ -1,5 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { skillContentPath } from "@server/constants";
+import { patchedValue } from "@server/lib/patch";
 import { parseSkillFile } from "@server/shared/skill-file";
 import { createSkillSchema } from "@skillpack/contracts/skills/requests";
 import {
@@ -86,12 +87,6 @@ type UpdateSkillMcpInput = Omit<
   "skillName"
 >;
 
-const patchField = <T>(
-  input: Record<string, unknown>,
-  key: string,
-  fallback: T
-): T => (Object.hasOwn(input, key) ? (input[key] as T) : fallback);
-
 const toPatchSkillInput = (input: UpdateSkillMcpInput) => {
   const skillFileResource = input.upsertResources.find(
     (resource) => resource.path === skillContentPath
@@ -105,21 +100,25 @@ const toPatchSkillInput = (input: UpdateSkillMcpInput) => {
 
   return {
     ...input,
-    allowedTools: patchField(
+    allowedTools: patchedValue(
       input,
       "allowedTools",
       parsedSkillFile.allowedTools
     ),
-    compatibility: patchField(
+    compatibility: patchedValue(
       input,
       "compatibility",
       parsedSkillFile.compatibility
     ),
     content: parsedSkillFile.body,
-    description: patchField(input, "description", parsedSkillFile.description),
-    license: patchField(input, "license", parsedSkillFile.license),
-    metadata: patchField(input, "metadata", parsedSkillFile.metadata),
-    name: patchField(input, "name", parsedSkillFile.name),
+    description: patchedValue(
+      input,
+      "description",
+      parsedSkillFile.description
+    ),
+    license: patchedValue(input, "license", parsedSkillFile.license),
+    metadata: patchedValue(input, "metadata", parsedSkillFile.metadata),
+    name: patchedValue(input, "name", parsedSkillFile.name),
     upsertResources: input.upsertResources.filter(
       (resource) => resource.path !== skillContentPath
     ),

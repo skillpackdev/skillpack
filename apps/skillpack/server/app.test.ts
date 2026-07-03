@@ -58,6 +58,23 @@ const resolvedSkill = (): ResolvedSkillResult => {
   };
 };
 
+describe("app auth coverage on collection routes", () => {
+  // Regression guard: `.use("/api/v1/<x>/*")` must also match the exact
+  // collection path, so unauthenticated list/create requests get 401.
+  it.each([
+    ["GET", "/api/v1/skills"],
+    ["POST", "/api/v1/skills"],
+    ["GET", "/api/v1/api-keys"],
+    ["GET", "/api/v1/origins"],
+  ])("rejects unauthenticated %s %s", async (method, path) => {
+    const app = createApp();
+
+    const response = await app.request(path, { method }, testEnv);
+
+    expect(response.status).toBe(401);
+  });
+});
+
 describe("app login provider discovery", () => {
   it("reports GitHub and OIDC when both provider configs are present", async () => {
     const app = createApp();

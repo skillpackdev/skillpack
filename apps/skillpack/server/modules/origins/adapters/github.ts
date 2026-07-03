@@ -28,5 +28,3 @@ export const createGithubOriginAdapter = ({
     readDefinitions: retrieval.readDefinitions,
   };
 };
-
-export const githubOriginAdapter = createGithubOriginAdapter();
