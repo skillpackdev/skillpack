@@ -19,9 +19,10 @@ description: ${description}
 # ${name}
 `;
 
-const treeEntry = (path: string): GitHubTreeEntry => ({
+const treeEntry = (path: string, size = 1): GitHubTreeEntry => ({
   path,
   sha: path,
+  size,
   type: "blob",
 });
 
@@ -168,6 +169,21 @@ describe("GitHub Origin retrieval", () => {
     expect(transport.getBlobText).not.toHaveBeenCalled();
   });
 
+  it("surfaces GitHub response messages when discovery fails", async () => {
+    const transport = createTransport([], {});
+    const error = new Error("Forbidden") as Error & { response: Response };
+    error.response = Response.json(
+      { message: "API rate limit exceeded" },
+      { status: 403 }
+    );
+    transport.getRepository.mockRejectedValue(error);
+    const retrieval = createGitHubRetrieval(transport);
+
+    await expect(retrieval.discover(origin)).rejects.toMatchObject({
+      message: "GitHub request failed: API rate limit exceeded",
+    });
+  });
+
   it("uses fallback discovery when priority roots are empty", async () => {
     const transport = createTransport(
       [
@@ -301,6 +317,102 @@ describe("GitHub Origin retrieval", () => {
     );
   });
 
+  it("reads resources with bounded concurrency while preserving order", async () => {
+    const resourcePaths = Array.from(
+      { length: 12 },
+      (_, index) => `skills/demo/references/${index}.txt`
+    );
+    const tree = [
+      treeEntry("skills/demo/SKILL.md"),
+      ...resourcePaths.map((path) => treeEntry(path)),
+    ];
+    const files = Object.fromEntries(
+      resourcePaths.map((path) => [path, path.split("/").at(-1) ?? path])
+    );
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const transport = {
+      ...createTransport(tree, {}),
+      getBlobText: vi
+        .fn<GitHubTransport["getBlobText"]>()
+        .mockImplementation(async (_owner, _repo, blobSha) => {
+          if (blobSha === "skills/demo/SKILL.md") {
+            return skillContent("demo");
+          }
+
+          inFlight += 1;
+          maxInFlight = Math.max(maxInFlight, inFlight);
+          await Promise.resolve();
+          inFlight -= 1;
+
+          return files[blobSha] ?? "";
+        }),
+    };
+    const retrieval = createGitHubRetrieval(transport);
+
+    const [result] = await retrieval.readDefinitions(origin, [
+      { skillName: "demo" },
+    ]);
+
+    expect(result).toMatchObject({
+      definition: {
+        resources: resourcePaths.map((path) => ({
+          content: path.split("/").at(-1) ?? path,
+          path: path.slice("skills/demo/".length),
+        })),
+      },
+      status: "resolved",
+    });
+    expect(maxInFlight).toBe(6);
+  });
+
+  it("fails preflight before reading blobs when a selected skill has too many resources", async () => {
+    const resourcePaths = Array.from(
+      { length: 201 },
+      (_, index) => `skills/demo/references/${index}.txt`
+    );
+    const transport = createTransport(
+      [
+        treeEntry("skills/demo/SKILL.md"),
+        ...resourcePaths.map((path) => treeEntry(path)),
+      ],
+      { "skills/demo/SKILL.md": skillContent("demo") }
+    );
+    const retrieval = createGitHubRetrieval(transport);
+
+    const [result] = await retrieval.readDefinitions(origin, [
+      { skillName: "demo" },
+    ]);
+
+    expect(result).toMatchObject({
+      error: "Skill has too many resources: 201 exceeds 200",
+      selection: { skillName: "demo" },
+      status: "failed",
+    });
+    expect(transport.getBlobText).not.toHaveBeenCalled();
+  });
+
+  it("fails preflight before reading blobs when selected skill files are too large", async () => {
+    const transport = createTransport(
+      [
+        treeEntry("skills/demo/SKILL.md", 1_000_001),
+        treeEntry("skills/demo/references/notes.txt", 1_000_000),
+      ],
+      { "skills/demo/SKILL.md": skillContent("demo") }
+    );
+    const retrieval = createGitHubRetrieval(transport);
+
+    const [result] = await retrieval.readDefinitions(origin, [
+      { skillName: "demo" },
+    ]);
+
+    expect(result).toMatchObject({
+      error: "Skill files are too large: 2000001 bytes exceeds 2000000",
+      selection: { skillName: "demo" },
+      status: "failed",
+    });
+    expect(transport.getBlobText).not.toHaveBeenCalled();
+  });
   it("reads selected definitions from a pinned revision", async () => {
     const transport = createTransport([treeEntry("skills/demo/SKILL.md")], {
       "skills/demo/SKILL.md": skillContent("demo"),
@@ -357,6 +469,7 @@ describe("GitHub Origin retrieval", () => {
       selection: { skillName: "demo" },
       status: "failed",
     });
+    expect(transport.getBlobText).not.toHaveBeenCalled();
   });
 
   it("fails a selected definition with unsafe resource paths", async () => {
@@ -394,12 +507,12 @@ describe("GitHub Origin retrieval", () => {
 
     expect(results).toStrictEqual([
       {
-        error: "GitHub request failed",
+        error: "GitHub request failed: network down",
         selection: { skillName: "one" },
         status: "failed",
       },
       {
-        error: "GitHub request failed",
+        error: "GitHub request failed: network down",
         selection: { skillName: "two" },
         status: "failed",
       },

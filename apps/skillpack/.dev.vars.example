@@ -1,8 +1,9 @@
 # Local secrets for `pnpm dev`.
-# Required non-secret values live in wrangler.jsonc `vars` so Wrangler deploys them.
+# Local development values live here. Keep production values in Cloudflare.
 BETTER_AUTH_SECRET="replace-with-a-random-32-byte-secret"
 
 # GitHub is used for both Better Auth sign-in and public origin discovery/fork reads.
 # Register this callback URL with your GitHub OAuth App:
 # http://localhost:5173/api/auth/callback/github
+GITHUB_CLIENT_ID="replace-with-github-oauth-app-client-id"
 GITHUB_CLIENT_SECRET="replace-with-github-oauth-app-client-secret"
