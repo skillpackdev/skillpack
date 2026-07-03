@@ -174,6 +174,10 @@ export class SkillRepository {
         updatedAt: now,
       })
       .returning();
+    // D1 has no interactive transactions, so later batch statements cannot
+    // reference pks returned by earlier ones. Instead, resolve pks inside the
+    // atomic db.batch via subqueries on unique keys ((ownerUserId, name) for
+    // skills, versionId for versions).
     const createdSkillPk = sql<number>`(
       select ${skillsTable.pk}
       from ${skillsTable}
@@ -524,6 +528,8 @@ export class SkillRepository {
         skillPk: currentSkill.pk,
       })
       .returning();
+    // See createSkill: pk resolution via unique-key subquery keeps the batch
+    // atomic on D1.
     const createdVersionPk = sql<number>`(
       select ${skillVersionsTable.pk}
       from ${skillVersionsTable}
