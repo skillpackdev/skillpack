@@ -15,6 +15,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import { useSkillFile } from "../api/use-skill-detail";
 import type { ResourceDraftSession } from "../lib/resource-draft-session";
+import {
+  getLoadedResourceStatus,
+  getSelectedSkillMarkdownFile,
+  resourceLoadingFileStatus,
+  resourceSelectFileStatus,
+} from "../lib/resource-file-selection";
+import type { ResourceFileContent } from "../lib/resource-file-selection";
 import { getSkillResourceKind } from "../lib/resource-kind";
 import { getDetailFileSwitcherLabel } from "../lib/skill-detail-surface";
 import {
@@ -22,7 +29,6 @@ import {
   getRawResourceUrl,
   getTextSize,
   isEditableTextFile,
-  skillFileMediaType,
   skillFilePath,
 } from "../lib/skill-files";
 import type { SkillFile } from "../lib/skill-files";
@@ -57,14 +63,7 @@ interface ResourceContentPaneProps {
   deletedPaths: Set<string>;
   descriptionValue: string | undefined;
   existingPaths: Set<string>;
-  file:
-    | {
-        content: string;
-        mediaType: string;
-        path: string;
-        size: number;
-      }
-    | undefined;
+  file: ResourceFileContent | undefined;
   isEditing: boolean;
   rawUrl: string | undefined;
   selectedFile: SkillFile | undefined;
@@ -89,11 +88,11 @@ const getResourceContentStatus = (
   isLoading: boolean
 ) => {
   if (isLoading) {
-    return "Loading file...";
+    return resourceLoadingFileStatus;
   }
 
   if (file) {
-    return `Loaded ${file.path}`;
+    return getLoadedResourceStatus(file.path);
   }
 
   return "File unavailable";
@@ -111,7 +110,7 @@ const getViewerStatus = ({
   selectedFile: SkillFile | undefined;
 }) => {
   if (!selectedFile) {
-    return "Select a file";
+    return resourceSelectFileStatus;
   }
 
   if (isDeleted) {
@@ -154,22 +153,6 @@ const getShouldFetchFile = ({
     getSelectedResourceKind(selectedFile) !== "image" &&
     !addedPaths.has(selectedFile.path)
   );
-
-const getSelectedSkillFile = (
-  skill: ResolvedSkill | undefined,
-  selectedFile: SkillFile | undefined
-) => {
-  if (!(skill && selectedFile?.path === skillFilePath)) {
-    return;
-  }
-
-  return {
-    content: skill.content,
-    mediaType: skillFileMediaType,
-    path: skillFilePath,
-    size: getTextSize(skill.content),
-  };
-};
 
 const getSelectedAddedFile = (
   addedPaths: Set<string>,
@@ -289,7 +272,7 @@ const useSelectedResourceViewModel = ({
     skill?.name,
     shouldFetchFile && selectedFile ? selectedFile.path : undefined
   );
-  const skillFile = getSelectedSkillFile(skill, selectedFile);
+  const skillFile = getSelectedSkillMarkdownFile(skill, selectedFile);
   const addedFile = getSelectedAddedFile(
     addedPaths,
     draftsByPath,

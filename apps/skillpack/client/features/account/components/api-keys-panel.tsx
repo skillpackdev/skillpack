@@ -2,6 +2,7 @@ import type { ApiKeySummary } from "@skillpack/contracts/api-keys/responses";
 import { PlusIcon, Trash2Icon, XIcon } from "lucide-react";
 import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import {
   AlertDialog,
@@ -25,6 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { getApiErrorMessage } from "@/shared/api/client";
 
 import { useCreateApiKey, useRevokeApiKey } from "../api/use-api-keys";
 import {
@@ -65,15 +67,19 @@ export const ApiKeysPanel = ({ apiKeys }: ApiKeysPanelProps) => {
   const submitApiKey = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const result = await createApiKey.mutateAsync({
-      expiresAt: dateInputToIso(expiresAt),
-      name,
-    });
+    try {
+      const result = await createApiKey.mutateAsync({
+        expiresAt: dateInputToIso(expiresAt),
+        name,
+      });
 
-    resetCreateForm();
-    setCreateFormOpen(false);
-    setCreatedSecret(result.secret);
-    setSecretDialogOpen(true);
+      resetCreateForm();
+      setCreateFormOpen(false);
+      setCreatedSecret(result.secret);
+      setSecretDialogOpen(true);
+    } catch (error) {
+      toast.error(await getApiErrorMessage(error));
+    }
   };
 
   const confirmRevokeApiKey = async () => {
@@ -81,8 +87,12 @@ export const ApiKeysPanel = ({ apiKeys }: ApiKeysPanelProps) => {
       return;
     }
 
-    await revokeApiKey.mutateAsync(apiKeyToRevoke.id);
-    setApiKeyToRevoke(null);
+    try {
+      await revokeApiKey.mutateAsync(apiKeyToRevoke.id);
+      setApiKeyToRevoke(null);
+    } catch (error) {
+      toast.error(await getApiErrorMessage(error));
+    }
   };
 
   return (

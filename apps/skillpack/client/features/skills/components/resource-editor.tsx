@@ -4,7 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { validateNewResourcePath } from "../lib/resource-drafts";
+import type { ResourceFileContent } from "../lib/resource-file-selection";
 import { getSkillResourceKind } from "../lib/resource-kind";
+import type { SkillFile } from "../lib/skill-files";
 import { ResourceViewer, SkillDescription } from "./resource-viewer";
 
 const CodeEditor = lazy(async () => {
@@ -12,29 +14,15 @@ const CodeEditor = lazy(async () => {
   return { default: module.CodeEditor };
 });
 
-interface ResourceEditorFile {
-  content: string;
-  mediaType: string;
-  path: string;
-  size: number;
-}
-
-interface ResourceEditorResource {
-  description?: string;
-  mediaType: string;
-  path: string;
-  size: number;
-}
-
 interface ResourceEditorProps {
   canEdit: boolean;
   canEditDescription?: boolean;
   descriptionValue?: string;
   existingPaths?: Set<string>;
-  file: ResourceEditorFile | undefined;
+  file: ResourceFileContent | undefined;
   preferEdit?: boolean;
   rawUrl: string | undefined;
-  resource: ResourceEditorResource | undefined;
+  resource: SkillFile | undefined;
   showMeta?: boolean;
   showRename?: boolean;
   status: string;
@@ -60,7 +48,7 @@ const ResourceEditorHeader = ({
 }: {
   existingPaths: Set<string>;
   mode: ResourceEditorMode;
-  resource: ResourceEditorResource;
+  resource: SkillFile;
   showRename: boolean;
   supportsPreview: boolean;
   onModeChange: (mode: ResourceEditorMode) => void;

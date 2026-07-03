@@ -261,6 +261,7 @@ export const SkillForkView = ({
       onComplete();
     } catch (error) {
       setSubmitStatus(error instanceof Error ? error.message : "Add failed");
+    } finally {
       setIsSubmitting(false);
     }
   };

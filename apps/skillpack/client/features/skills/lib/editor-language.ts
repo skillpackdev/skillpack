@@ -1,75 +1,35 @@
 import { StreamLanguage } from "@codemirror/language";
 import type { Extension } from "@codemirror/state";
 
+import {
+  getExtension,
+  getResourceType,
+  mediaTypeEditorLanguageMap,
+} from "@/domain/skills/resource-types";
+import type { EditorLanguage } from "@/domain/skills/resource-types";
+
 interface EditorLanguageInput {
   mediaType: string | undefined;
   path: string;
 }
 
-type EditorLanguage =
-  | "javascript"
-  | "json"
-  | "markdown"
-  | "python"
-  | "shell"
-  | "yaml";
-
-const extensionLanguageMap: Record<string, EditorLanguage> = {
-  bash: "shell",
-  cjs: "javascript",
-  js: "javascript",
-  json: "json",
-  jsx: "javascript",
-  md: "markdown",
-  mjs: "javascript",
-  py: "python",
-  sh: "shell",
-  ts: "javascript",
-  tsx: "javascript",
-  yaml: "yaml",
-  yml: "yaml",
-};
-
-const mediaTypeLanguageMap: Record<string, EditorLanguage> = {
-  "application/javascript": "javascript",
-  "application/json": "json",
-  "application/typescript": "javascript",
-  "application/x-sh": "shell",
-  "application/x-yaml": "yaml",
-  "text/javascript": "javascript",
-  "text/markdown": "markdown",
-  "text/x-python": "python",
-  "text/x-shellscript": "shell",
-  "text/yaml": "yaml",
-};
-
-const getFileExtension = (path: string) => {
-  const lastSegment = path.split("/").at(-1) ?? path;
-  const extension = lastSegment.includes(".")
-    ? lastSegment.split(".").at(-1)
-    : undefined;
-
-  return extension?.toLowerCase();
-};
-
 const getEditorLanguage = ({
   mediaType,
   path,
 }: EditorLanguageInput): EditorLanguage | undefined => {
-  const extension = getFileExtension(path);
-
-  if (extension && extensionLanguageMap[extension]) {
-    return extensionLanguageMap[extension];
+  const editorLanguage = getResourceType(path)?.editorLanguage;
+  if (editorLanguage) {
+    return editorLanguage;
   }
 
-  if (mediaType && mediaTypeLanguageMap[mediaType]) {
-    return mediaTypeLanguageMap[mediaType];
+  if (mediaType) {
+    return mediaTypeEditorLanguageMap[mediaType];
   }
 };
 
 const loadJavaScriptLanguage = async (path: string) => {
   const { javascript } = await import("@codemirror/lang-javascript");
-  const extension = getFileExtension(path);
+  const extension = getExtension(path);
 
   return javascript({
     jsx: extension === "jsx" || extension === "tsx",

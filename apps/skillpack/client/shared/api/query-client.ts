@@ -1,4 +1,4 @@
-import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
+import { QueryCache, QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { getApiErrorMessage } from "./client";
@@ -16,11 +16,6 @@ export const queryClient = new QueryClient({
       staleTime: defaultQueryStaleTimeMs,
     },
   },
-  mutationCache: new MutationCache({
-    onError: (error) => {
-      void notifyQueryError(error);
-    },
-  }),
   queryCache: new QueryCache({
     onError: (error) => {
       void notifyQueryError(error);

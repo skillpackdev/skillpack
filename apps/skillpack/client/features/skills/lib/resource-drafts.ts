@@ -1,6 +1,8 @@
 import type { PatchSkillInput } from "@skillpack/contracts/skills/requests";
 import { safeRelativePathSchema } from "@skillpack/core/primitives";
 
+import { getResourceType } from "@/domain/skills/resource-types";
+
 import { skillFilePath } from "./skill-files";
 
 interface DraftFileInfo {
@@ -17,28 +19,8 @@ interface BuildResourcePatchInputParams {
   skillNameDraft?: string;
 }
 
-const extensionMediaTypes = new Map<string, string>([
-  ["bash", "text/x-shellscript"],
-  ["cjs", "text/javascript"],
-  ["js", "text/javascript"],
-  ["json", "application/json"],
-  ["jsx", "text/javascript"],
-  ["md", "text/markdown"],
-  ["mjs", "text/javascript"],
-  ["py", "text/x-python"],
-  ["sh", "text/x-shellscript"],
-  ["ts", "application/typescript"],
-  ["tsx", "application/typescript"],
-  ["txt", "text/plain"],
-  ["yaml", "application/yaml"],
-  ["yml", "application/yaml"],
-]);
-
-const getExtension = (path: string) =>
-  path.split(".").pop()?.toLowerCase() ?? "";
-
 export const getTextResourceMediaType = (path: string) =>
-  extensionMediaTypes.get(getExtension(path)) ?? "text/plain";
+  getResourceType(path)?.mediaType ?? "text/plain";
 
 export const validateNewResourcePath = (
   path: string,

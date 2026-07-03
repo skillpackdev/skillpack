@@ -1,6 +1,5 @@
 import type {
   ResolvedSkill,
-  SkillResourceResponse,
   SkillVersionListItem,
 } from "@skillpack/contracts/skills/responses";
 import { formatDistanceToNow } from "date-fns";
@@ -73,12 +72,17 @@ import {
   useRestoreSkillVersion,
   useUpsertSkillVersionLabel,
 } from "../api/use-skill-mutations";
+import {
+  getLoadedResourceStatus,
+  getSelectedSkillMarkdownFile,
+  resourceLoadingFileStatus,
+  resourceSelectFileStatus,
+} from "../lib/resource-file-selection";
+import type { ResourceFileContent } from "../lib/resource-file-selection";
 import { getSkillResourceKind } from "../lib/resource-kind";
 import {
   getRawSkillVersionResourceUrl,
   getSkillFiles,
-  getTextSize,
-  skillFileMediaType,
   skillFilePath,
 } from "../lib/skill-files";
 import type { SkillFile } from "../lib/skill-files";
@@ -132,24 +136,15 @@ const getVersionResourceFile = ({
   selectedFile,
   version,
 }: {
-  resourceFile: SkillResourceResponse | undefined;
+  resourceFile: ResourceFileContent | undefined;
   selectedFile: SkillFile | undefined;
   version: ResolvedSkill | undefined;
-}) => {
+}): ResourceFileContent | undefined => {
   if (!(selectedFile && version)) {
     return;
   }
 
-  if (selectedFile.path === skillFilePath) {
-    return {
-      content: version.content,
-      mediaType: skillFileMediaType,
-      path: skillFilePath,
-      size: getTextSize(version.content),
-    };
-  }
-
-  return resourceFile;
+  return getSelectedSkillMarkdownFile(version, selectedFile) ?? resourceFile;
 };
 
 const getVersionResourceStatus = ({
@@ -166,14 +161,14 @@ const getVersionResourceStatus = ({
   }
 
   if (resourceFilePending) {
-    return "Loading file...";
+    return resourceLoadingFileStatus;
   }
 
   if (selectedFile) {
-    return `Loaded ${selectedFile.path}`;
+    return getLoadedResourceStatus(selectedFile.path);
   }
 
-  return "Select a file";
+  return resourceSelectFileStatus;
 };
 
 const VersionHistoryEmptyState = ({ status }: { status: string }) => (

@@ -11,41 +11,29 @@ import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 
 import { formatBytes } from "../lib/format-bytes";
+import type { ResourceFileContent } from "../lib/resource-file-selection";
 import {
   getSkillResourceKind,
   getSkillResourceLanguage,
 } from "../lib/resource-kind";
-
-interface ResourceViewerFile {
-  content: string;
-  mediaType: string;
-  path: string;
-  size: number;
-}
-
-interface ResourceViewerResource {
-  description?: string;
-  mediaType: string;
-  path: string;
-  size: number;
-}
+import type { SkillFile } from "../lib/skill-files";
 
 interface ResourceViewerProps {
   canEditDescription?: boolean;
   descriptionValue?: string;
-  file: ResourceViewerFile | undefined;
+  file: ResourceFileContent | undefined;
   rawUrl: string | undefined;
-  resource: ResourceViewerResource | undefined;
+  resource: SkillFile | undefined;
   showMeta?: boolean;
   status: string;
   onDescriptionChange?: (description: string) => void;
 }
 
 interface ResourceBodyProps {
-  file: ResourceViewerFile | undefined;
+  file: ResourceFileContent | undefined;
   kind: ReturnType<typeof getSkillResourceKind>;
   rawUrl: string | undefined;
-  resource: ResourceViewerResource;
+  resource: SkillFile;
   status: string;
 }
 
@@ -62,11 +50,7 @@ const loadCodeResource = async () => {
 const MarkdownContent = lazy(loadMarkdownContent);
 const CodeResource = lazy(loadCodeResource);
 
-export const ResourceMeta = ({
-  resource,
-}: {
-  resource: ResourceViewerResource;
-}) => (
+export const ResourceMeta = ({ resource }: { resource: SkillFile }) => (
   <div className="hidden min-h-14 shrink-0 items-center gap-0 border-b border-border bg-background px-6 py-0 text-sm text-muted-foreground md:flex">
     <span className="truncate font-medium text-foreground">
       {resource.path}
@@ -168,7 +152,7 @@ const ResourceBody = ({
       <div className="p-4 md:p-6">
         <img
           src={rawUrl}
-          alt={resource.path}
+          alt={`Resource ${resource.path}`}
           className="max-h-[70vh] max-w-full rounded-lg border border-border object-contain"
         />
       </div>
