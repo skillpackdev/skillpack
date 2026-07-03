@@ -60,12 +60,10 @@ describe("MCP Skill authoring e2e", () => {
         .mockResolvedValue("user-e2e"),
       setSkillServicesForUser: (c: Context<AppBindings>, userId: string) => {
         c.set("currentUser", { canWrite: true, id: userId });
-        const repository = new SkillRepository(c.var.db, userId);
-        c.set("skillRepository", repository);
         c.set(
           "skillService",
           new SkillService(
-            repository,
+            new SkillRepository(c.var.db, userId),
             new ResourceManifest(c.var.skillStorage),
             c.var.originService
           )
@@ -149,16 +147,14 @@ describe("MCP Skill authoring e2e", () => {
 
     const repository = new SkillRepository(createDb(env.DB), "user-e2e");
     const skill = await repository.findSkillByName("mcp-demo");
-    const versionResources = await repository.listVersionResources(
-      skill?.pk ?? 0
-    );
+    const versions = await repository.listVersions("mcp-demo");
 
     expect({
       description: skill?.description,
-      versionResourceCount: versionResources.length,
+      versionCount: versions.length,
     }).toStrictEqual({
       description: "Updated demo skill",
-      versionResourceCount: 2,
+      versionCount: 2,
     });
   });
 });

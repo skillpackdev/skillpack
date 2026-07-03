@@ -6,11 +6,10 @@ import { SkillRepository } from "@server/modules/skills/repository";
 import { ResourceManifest } from "@server/modules/skills/resource-manifest";
 import { SkillService } from "@server/modules/skills/service";
 import {
-  getMcpSkillReadBearerAccess,
-  getMcpSkillReadBearerUserId,
   getOAuthResource,
-  getSkillReadBearerUserId,
   getRequestOrigin,
+  getSkillBearerAccess,
+  getSkillReadBearerUserId,
 } from "@server/oauth";
 import type { AppBindings } from "@server/types";
 import type { Context, MiddlewareHandler } from "hono";
@@ -52,13 +51,13 @@ const setDefaultSkillServicesForUser = (
   userId: string
 ) => {
   c.set("currentUser", { canWrite: true, id: userId });
-  const skillRepository = new SkillRepository(c.var.db, userId);
-  const resourceManifest = new ResourceManifest(c.var.skillStorage);
-
-  c.set("skillRepository", skillRepository);
   c.set(
     "skillService",
-    new SkillService(skillRepository, resourceManifest, c.var.originService)
+    new SkillService(
+      new SkillRepository(c.var.db, userId),
+      new ResourceManifest(c.var.skillStorage),
+      c.var.originService
+    )
   );
 };
 
@@ -177,19 +176,60 @@ export const createRequireSkillsAuth = (
   });
 };
 
+interface McpBearerAccess {
+  canWrite: boolean;
+  userId: string;
+}
+
 export const createRequireMcpAuth = (
   options: AuthMiddlewareOptions
 ): MiddlewareHandler<AppBindings> => {
-  const verifyBearerUserId =
-    options.getSkillReadBearerUserId ?? getMcpSkillReadBearerUserId;
   const setSkillServicesForUser =
     options.setSkillServicesForUser ?? setDefaultSkillServicesForUser;
-  const verifyApiKeyUserId = options.getApiKeyUserId;
+
+  const verifyApiKeyAccess = async (
+    c: Context<AppBindings>,
+    token: string
+  ): Promise<McpBearerAccess | undefined> => {
+    const userId = options.getApiKeyUserId
+      ? await options.getApiKeyUserId(token)
+      : await c.var.apiKeyService.verifyApiKeySecret(token);
+
+    return userId ? { canWrite: true, userId } : undefined;
+  };
+
+  const verifyOAuthAccess = async (
+    c: Context<AppBindings>,
+    requestOrigin: string
+  ): Promise<McpBearerAccess | undefined> => {
+    try {
+      if (options.getSkillReadBearerUserId) {
+        const userId = await options.getSkillReadBearerUserId(
+          c.env,
+          requestOrigin,
+          c.req.raw.headers
+        );
+        return userId ? { canWrite: false, userId } : undefined;
+      }
+
+      return await getSkillBearerAccess(
+        c.env,
+        requestOrigin,
+        c.req.raw.headers
+      );
+    } catch {
+      return undefined;
+    }
+  };
 
   return createMiddleware<AppBindings>(async (c, next) => {
     const requestOrigin = getRequestOrigin(c.req.url);
     const resource = getOAuthResource(c.env, requestOrigin);
     const challenge = `Bearer realm="mcp", resource_metadata="${resource}/.well-known/oauth-protected-resource/mcp", scope="${skillpackOAuthScopes.join(" ")}"`;
+    const unauthorized = () => {
+      c.header("WWW-Authenticate", challenge);
+      return c.json({ error: "Unauthorized" }, 401);
+    };
     const origin = c.req.header("origin");
 
     if (origin && origin !== requestOrigin && origin !== resource) {
@@ -199,48 +239,19 @@ export const createRequireMcpAuth = (
     const token = getBearerToken(c);
 
     if (!token) {
-      c.header("WWW-Authenticate", challenge);
-      return c.json({ error: "Unauthorized" }, 401);
+      return unauthorized();
     }
 
-    let canWrite = false;
-    let userId: string | undefined;
+    const access = isSkillpackApiKeySecret(token)
+      ? await verifyApiKeyAccess(c, token)
+      : await verifyOAuthAccess(c, requestOrigin);
 
-    if (isSkillpackApiKeySecret(token)) {
-      userId = verifyApiKeyUserId
-        ? await verifyApiKeyUserId(token)
-        : await c.var.apiKeyService.verifyApiKeySecret(token);
-      canWrite = Boolean(userId);
-    } else {
-      try {
-        if (options.getSkillReadBearerUserId) {
-          userId = await verifyBearerUserId(
-            c.env,
-            requestOrigin,
-            c.req.raw.headers
-          );
-        } else {
-          const access = await getMcpSkillReadBearerAccess(
-            c.env,
-            requestOrigin,
-            c.req.raw.headers
-          );
-          userId = access?.userId;
-          canWrite = access?.canWrite ?? false;
-        }
-      } catch {
-        c.header("WWW-Authenticate", challenge);
-        return c.json({ error: "Unauthorized" }, 401);
-      }
+    if (!access) {
+      return unauthorized();
     }
 
-    if (!userId) {
-      c.header("WWW-Authenticate", challenge);
-      return c.json({ error: "Unauthorized" }, 401);
-    }
-
-    setSkillServicesForUser(c, userId);
-    c.set("currentUser", { canWrite, id: userId });
+    setSkillServicesForUser(c, access.userId);
+    c.set("currentUser", { canWrite: access.canWrite, id: access.userId });
     await next();
   });
 };

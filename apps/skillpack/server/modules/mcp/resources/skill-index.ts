@@ -1,9 +1,11 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { skillContentPath } from "@server/constants";
 import type { SkillRow } from "@server/modules/skills/types";
 import { buildSkillFileFrontmatter } from "@server/shared/skill-file";
+import {
+  skillIndexUri,
+  toSkillLocation,
+} from "@skillpack/core/skill-locations";
 
-import { skillIndexUri, toSkillpackLocation } from "../locators";
 import type { SkillpackMcpContext } from "../types";
 
 const sha256Digest = (sha256: string) => `sha256:${sha256}`;
@@ -38,9 +40,7 @@ export const registerSkillIndexResource = (
     skillIndexResourceDefinition,
     async () => {
       const skills =
-        await context.skillService.listSkillsWithCurrentResource(
-          skillContentPath
-        );
+        await context.skillService.listSkillsWithCurrentSkillFile();
       const index = { skills: [] } as {
         skills: {
           digest: string;
@@ -53,7 +53,7 @@ export const registerSkillIndexResource = (
         index.skills.push({
           digest: sha256Digest(resource.sha256),
           frontmatter: skillFrontmatter(skill),
-          url: toSkillpackLocation(skill.name),
+          url: toSkillLocation(skill.name),
         });
       }
 

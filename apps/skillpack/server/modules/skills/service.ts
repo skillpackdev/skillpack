@@ -7,7 +7,7 @@ import { markdownMediaType } from "@server/shared/text-resource";
 
 import { skillErrors } from "./errors";
 import type { SkillRepository } from "./repository";
-import { ResourceManifest } from "./resource-manifest";
+import type { ResourceManifest } from "./resource-manifest";
 import type {
   CreateSkillServiceInput,
   ForkSkillServiceInput,
@@ -15,13 +15,12 @@ import type {
   PatchSkillResult,
   PatchSkillServiceInput,
   ReadSkillFileByNameInput,
-  ReadSkillFileInput,
   ReadSkillFileResult,
   ReadSkillTextFileResult,
   ResolvedSkillResult,
   SkillActivationResult,
   SkillRow,
-  SkillWithCurrentAttachedResources,
+  SkillWithCurrentResources,
   SkillVersionHistoryResult,
   SkillVersionLabelResult,
   VersionedSkillResult,
@@ -88,17 +87,17 @@ export class SkillService {
     return this.repository.listSkills();
   }
 
-  listSkillsWithCurrentResource(path: string) {
-    return this.repository.listSkillsWithCurrentResource(path);
+  listSkillsWithCurrentSkillFile() {
+    return this.repository.listSkillsWithCurrentSkillFile();
   }
 
   listSkillsWithCurrentResources() {
     return this.repository.listSkillsWithCurrentResources();
   }
 
-  async resolveSkill(skillPk: number): Promise<ResolvedSkillResult> {
+  private async resolveSkill(skillPk: number): Promise<ResolvedSkillResult> {
     const state =
-      await this.repository.findSkillWithCurrentAttachedResourcesByPk(skillPk);
+      await this.repository.findSkillWithCurrentResourcesByPk(skillPk);
 
     if (!state) {
       throw skillErrors.skillNotFound();
@@ -109,7 +108,7 @@ export class SkillService {
 
   async resolveSkillByName(name: string): Promise<ResolvedSkillResult> {
     const state =
-      await this.repository.findSkillWithCurrentAttachedResourcesByName(name);
+      await this.repository.findSkillWithCurrentResourcesByName(name);
 
     if (!state) {
       throw skillErrors.skillNotFound();
@@ -122,60 +121,30 @@ export class SkillService {
     name: string
   ): Promise<SkillActivationResult> {
     const state =
-      await this.repository.findSkillWithCurrentAttachedResourcesByName(name);
+      await this.repository.findSkillWithCurrentResourcesByName(name);
 
     if (!state) {
       throw skillErrors.skillNotFound();
     }
 
-    const manifest = ResourceManifest.resolveManifest(state.resources);
     const skillFile = await this.readSkillFileForRow(state.skill);
 
     return {
-      resources: manifest.resources,
+      resources: state.resources,
       skill: state.skill,
       skillFileContent: skillFile.content,
     };
   }
 
   private async resolveSkillState(
-    state: SkillWithCurrentAttachedResources
+    state: SkillWithCurrentResources
   ): Promise<ResolvedSkillResult> {
-    const manifest = ResourceManifest.resolveManifest(state.resources);
     const skillFile = await this.readSkillFileForRow(state.skill);
 
     return {
       content: skillFile.body,
-      resources: manifest.resources,
+      resources: state.resources,
       skill: state.skill,
-    };
-  }
-
-  async readSkillResource(
-    input: ReadSkillFileInput
-  ): Promise<ReadSkillFileResult> {
-    const resource = await this.repository.findResourceByPath(
-      input.skillPk,
-      input.path
-    );
-
-    if (!resource) {
-      throw skillErrors.skillFileNotFound();
-    }
-
-    const object = await this.resourceManifest.getResourceObject(resource);
-
-    return { object, resource };
-  }
-
-  async readSkillTextFile(
-    input: ReadSkillFileInput
-  ): Promise<ReadSkillTextFileResult> {
-    const result = await this.readSkillResource(input);
-
-    return {
-      content: await result.object.text(),
-      resource: result.resource,
     };
   }
 
@@ -221,12 +190,11 @@ export class SkillService {
         input.skillName,
         input.versionId
       );
-    const manifest = ResourceManifest.resolveManifest(resources);
     const skillFile = await this.readSkillFileForRow(skill);
 
     return {
       content: skillFile.body,
-      resources: manifest.resources,
+      resources,
       skill,
       version,
     };
@@ -309,26 +277,12 @@ export class SkillService {
     return this.resolveSkill(skill.pk);
   }
 
-  async patchSkill(
-    skillPk: number,
-    input: PatchSkillServiceInput
-  ): Promise<PatchSkillResult> {
-    const state =
-      await this.repository.findSkillWithCurrentAttachedResourcesByPk(skillPk);
-
-    if (!state) {
-      throw skillErrors.skillNotFound();
-    }
-
-    return await this.patchResolvedSkill(state, input);
-  }
-
   async patchSkillByName(
     name: string,
     input: PatchSkillServiceInput
   ): Promise<PatchSkillResult> {
     const state =
-      await this.repository.findSkillWithCurrentAttachedResourcesByName(name);
+      await this.repository.findSkillWithCurrentResourcesByName(name);
 
     if (!state) {
       throw skillErrors.skillNotFound();
@@ -338,7 +292,7 @@ export class SkillService {
   }
 
   private async patchResolvedSkill(
-    state: SkillWithCurrentAttachedResources,
+    state: SkillWithCurrentResources,
     input: PatchSkillServiceInput
   ): Promise<PatchSkillResult> {
     const { resources: currentResources, skill } = state;
@@ -417,16 +371,6 @@ export class SkillService {
       await this.resourceManifest.storeSkillFile(skillFileContent);
 
     return { frontmatter: nextSkillFile.frontmatter, skillFile };
-  }
-
-  async deleteSkill(skillPk: number) {
-    const skill = await this.repository.findSkillByPk(skillPk);
-
-    if (!skill) {
-      throw skillErrors.skillNotFound();
-    }
-
-    await this.repository.deleteSkillByPk(skill.pk);
   }
 
   async deleteSkillByName(name: string) {

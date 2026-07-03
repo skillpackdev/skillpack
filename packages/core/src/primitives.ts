@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-export const skillIdSchema = z.coerce.number().int().positive();
-
 const skillNamePattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 const hasLowercaseLetterPattern = /[a-z]/u;
 

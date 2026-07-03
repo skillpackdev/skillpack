@@ -2,8 +2,11 @@ import { ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
 import { skillContentPath } from "@server/constants";
+import {
+  parseSkillResourceUri,
+  toSkillResourceUri,
+} from "@skillpack/core/skill-locations";
 
-import { parseSkillpackResourceUri, toSkillpackResourceUri } from "../locators";
 import type { SkillpackMcpContext } from "../types";
 
 interface ListedMcpResource {
@@ -48,7 +51,7 @@ export const registerSkillResource = (
                 ? skill.name
                 : `${skill.name}: ${resource.path}`,
               size: resource.size,
-              uri: toSkillpackResourceUri(skill.name, resource.path),
+              uri: toSkillResourceUri(skill.name, resource.path),
             });
           }
         }
@@ -58,9 +61,9 @@ export const registerSkillResource = (
     }),
     skillResourceDefinition,
     async (uri) => {
-      let parsed: ReturnType<typeof parseSkillpackResourceUri>;
+      let parsed: ReturnType<typeof parseSkillResourceUri>;
       try {
-        parsed = parseSkillpackResourceUri(uri.toString());
+        parsed = parseSkillResourceUri(uri.toString());
       } catch (error) {
         throw toInvalidParamsError(error);
       }

@@ -1024,8 +1024,8 @@ describe("app MCP auth", () => {
     const createdAt = new Date("2026-05-25T12:00:00.000Z");
     const readSkillTextFileByName =
       vi.fn<SkillService["readSkillTextFileByName"]>();
-    const listSkillsWithCurrentResource = vi
-      .fn<SkillService["listSkillsWithCurrentResource"]>()
+    const listSkillsWithCurrentSkillFile = vi
+      .fn<SkillService["listSkillsWithCurrentSkillFile"]>()
       .mockResolvedValue([
         {
           resource: {
@@ -1056,13 +1056,13 @@ describe("app MCP auth", () => {
             versionId: "version-current",
           },
         },
-      ] as Awaited<ReturnType<SkillService["listSkillsWithCurrentResource"]>>);
+      ] as Awaited<ReturnType<SkillService["listSkillsWithCurrentSkillFile"]>>);
     const app = createApp({
       getSkillReadBearerUserId: vi
         .fn<VerifySkillReadBearerUserId>()
         .mockResolvedValue("user-oauth"),
       setSkillServicesForUser: setSkillServicesForUser(
-        { listSkillsWithCurrentResource, readSkillTextFileByName },
+        { listSkillsWithCurrentSkillFile, readSkillTextFileByName },
         []
       ),
     });
@@ -1104,7 +1104,7 @@ describe("app MCP auth", () => {
         },
       ],
     });
-    expect(listSkillsWithCurrentResource).toHaveBeenCalledWith("SKILL.md");
+    expect(listSkillsWithCurrentSkillFile).toHaveBeenCalledOnce();
     expect(readSkillTextFileByName).not.toHaveBeenCalled();
   });
 

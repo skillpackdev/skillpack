@@ -69,13 +69,7 @@ const getBearerAccess = async (
   };
 };
 
-export const getSkillReadBearerAccess = (
-  env: Env,
-  origin: string,
-  headers: Headers
-) => getBearerAccess(env, origin, headers, getOAuthResource(env, origin));
-
-export const getMcpSkillReadBearerAccess = (
+export const getSkillBearerAccess = (
   env: Env,
   origin: string,
   headers: Headers
@@ -86,20 +80,15 @@ export const getSkillReadBearerUserId = async (
   origin: string,
   headers: Headers
 ) => {
-  const access = await getSkillReadBearerAccess(env, origin, headers);
+  const access = await getSkillBearerAccess(env, origin, headers);
   return access?.userId;
 };
 
-export const getMcpSkillReadBearerUserId = async (
-  env: Env,
-  origin: string,
-  headers: Headers
+const getResourceMetadata = async (
+  resource: string,
+  resourceName: string,
+  scopes: readonly string[]
 ) => {
-  const access = await getMcpSkillReadBearerAccess(env, origin, headers);
-  return access?.userId;
-};
-
-const getResourceMetadata = async (resource: string, resourceName: string) => {
   const resourceClient = oauthProviderResourceClient();
   const authorizationServer = new URL("/", resource).href.replace(/\/$/u, "");
 
@@ -110,10 +99,10 @@ const getResourceMetadata = async (resource: string, resourceName: string) => {
       jwks_uri: `${authorizationServer}/api/auth/jwks`,
       resource,
       resource_name: resourceName,
-      scopes_supported: [skillReadScope, skillWriteScope],
+      scopes_supported: [...scopes],
     },
     {
-      externalScopes: [skillReadScope, skillWriteScope],
+      externalScopes: [...scopes],
       silenceWarnings: { oidcScopes: true },
     }
   );
@@ -122,29 +111,13 @@ const getResourceMetadata = async (resource: string, resourceName: string) => {
 export const getProtectedResourceMetadata = (env: Env, origin: string) =>
   getResourceMetadata(
     getOAuthResource(env, origin),
-    "Skillpack Managed Skills"
+    "Skillpack Managed Skills",
+    [skillReadScope, skillWriteScope]
   );
 
-export const getMcpProtectedResourceMetadata = async (
-  env: Env,
-  origin: string
-) => {
-  const resourceClient = oauthProviderResourceClient();
-  const resource = getOAuthResource(env, origin);
-  const authorizationServer = new URL("/", resource).href.replace(/\/$/u, "");
-
-  return await resourceClient.getActions().getProtectedResourceMetadata(
-    {
-      authorization_servers: [authorizationServer],
-      bearer_methods_supported: ["header"],
-      jwks_uri: `${authorizationServer}/api/auth/jwks`,
-      resource,
-      resource_name: "Skillpack MCP Server",
-      scopes_supported: [...mcpProtectedResourceScopes],
-    },
-    {
-      externalScopes: [...mcpProtectedResourceScopes],
-      silenceWarnings: { oidcScopes: true },
-    }
+export const getMcpProtectedResourceMetadata = (env: Env, origin: string) =>
+  getResourceMetadata(
+    getOAuthResource(env, origin),
+    "Skillpack MCP Server",
+    mcpProtectedResourceScopes
   );
-};

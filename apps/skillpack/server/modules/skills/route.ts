@@ -37,7 +37,6 @@ const skillErrorStatus = {
   "invalid-version-label": 400,
   "invalid-version-selector": 400,
   "reserved-resource-path": 400,
-  "skill-creation-failed": 500,
   "skill-file-not-found": 404,
   "skill-not-found": 404,
   "skill-object-not-found": 404,

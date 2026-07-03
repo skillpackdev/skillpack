@@ -8,10 +8,6 @@ import type {
   TextResourceInput,
 } from "./types";
 
-export interface ResolvedResourceManifest {
-  resources: SkillResourceRow[];
-}
-
 const containsSkillContentPath = (path: string) =>
   path.split("/").includes(skillContentPath);
 
@@ -93,12 +89,6 @@ export class ResourceManifest {
     }
 
     return [...nextResources.values()];
-  }
-
-  static resolveManifest(
-    resources: SkillResourceRow[]
-  ): ResolvedResourceManifest {
-    return { resources };
   }
 
   getResourceObject(resource: { sha256: string }) {

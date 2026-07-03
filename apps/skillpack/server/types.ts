@@ -1,7 +1,6 @@
 import type { createDb } from "./db/client";
 import type { ApiKeyService } from "./modules/api-keys/service";
 import type { OriginService } from "./modules/origins/service";
-import type { SkillRepository } from "./modules/skills/repository";
 import type { SkillService } from "./modules/skills/service";
 import type { SkillStorage } from "./modules/skills/storage";
 
@@ -14,7 +13,6 @@ export interface AppBindings {
     currentUser: { canWrite?: boolean; id: string };
     db: Database;
     originService: OriginService;
-    skillRepository: SkillRepository;
     skillService: SkillService;
     skillStorage: SkillStorage;
   };

@@ -95,8 +95,8 @@ describe("skill repository migrations", () => {
       const migratedResources = await repository.listResourcesBySkillPk(
         skill?.pk ?? 0
       );
-      const skillFileResource = await repository.findResourceByPath(
-        skill?.pk ?? 0,
+      const skillFileResource = await repository.findResourceByName(
+        "demo",
         skillContentPath
       );
 
@@ -169,8 +169,8 @@ describe("skill repository persistence", () => {
     const committedResources = await repository.listResourcesBySkillPk(
       skill.pk
     );
-    const skillFileResource = await repository.findResourceByPath(
-      skill.pk,
+    const skillFileResource = await repository.findResourceByName(
+      "demo",
       skillContentPath
     );
     const completeResources = await repository.listSkillsWithCurrentResources();
@@ -333,8 +333,8 @@ describe("skill repository persistence", () => {
       .from(skillVersionsTable)
       .where(eq(skillVersionsTable.skillPk, skill.pk));
     const restoredResources = await repository.listResourcesBySkillPk(skill.pk);
-    const restoredSkillFile = await repository.findResourceByPath(
-      skill.pk,
+    const restoredSkillFile = await repository.findResourceByName(
+      "demo",
       skillContentPath
     );
 

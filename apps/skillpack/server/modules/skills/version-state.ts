@@ -12,7 +12,7 @@ import type {
   SkillRow,
   SkillVersionFrontmatter,
   SkillVersionRow,
-  SkillWithCurrentAttachedResources,
+  SkillWithCurrentResources,
   StoredResourceObject,
 } from "./types";
 
@@ -182,10 +182,10 @@ export const findResourceInCurrentVersion = (
   return findManifestResource(row.version, path, row.skill.pk);
 };
 
-export const toSkillWithCurrentAttachedResources = (row: {
+export const toSkillWithCurrentResources = (row: {
   skill: SkillIdentityRow;
   version: SkillVersionRow;
-}): SkillWithCurrentAttachedResources => ({
+}): SkillWithCurrentResources => ({
   resources: toResourceRows(
     row.version.resourceManifest,
     row.skill.pk,

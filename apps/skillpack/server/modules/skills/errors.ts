@@ -8,7 +8,6 @@ export type SkillErrorCode =
   | "invalid-version-label"
   | "invalid-version-selector"
   | "reserved-resource-path"
-  | "skill-creation-failed"
   | "skill-file-not-found"
   | "skill-not-found"
   | "skill-object-not-found";
@@ -63,8 +62,6 @@ export const skillErrors = {
       "reserved-resource-path",
       "Resource path is reserved for SKILL.md"
     ),
-  skillCreationFailed: (message: string) =>
-    new SkillModuleError("skill-creation-failed", message),
   skillFileNotFound: () =>
     new SkillModuleError("skill-file-not-found", "Skill file not found"),
   skillNotFound: () =>

@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { toSkillLocation } from "@skillpack/core/skill-locations";
 
-import { toSkillpackLocation } from "../locators";
 import type { SkillpackMcpContext } from "../types";
 
 const listSkillsToolDefinition = {
@@ -26,7 +26,7 @@ export const registerListSkillsTool = (
             {
               skills: skills.map(({ skill }) => ({
                 description: skill.description,
-                location: toSkillpackLocation(skill.name),
+                location: toSkillLocation(skill.name),
                 name: skill.name,
               })),
             },

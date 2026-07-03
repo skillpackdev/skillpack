@@ -49,10 +49,6 @@ export interface SkillWithCurrentResources extends SkillWithCurrentState {
   resources: SkillResourceRow[];
 }
 
-export interface SkillWithCurrentAttachedResources extends SkillWithCurrentState {
-  resources: SkillResourceRow[];
-}
-
 export interface ResolvedSkillResult extends SkillWithCurrentState {
   content: string;
   resources: SkillResourceRow[];
@@ -90,18 +86,9 @@ export interface SkillFileResource {
   size: number;
 }
 
-export interface ReadSkillFileInput {
-  path: string;
-  skillPk: number;
-}
-
 export interface ReadSkillFileByNameInput {
   path: string;
   skillName: string;
-}
-
-export interface ReadSkillVersionFileByNameInput extends ReadSkillFileByNameInput {
-  versionId: string;
 }
 
 export interface ReadSkillFileResult {
