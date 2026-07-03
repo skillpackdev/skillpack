@@ -96,11 +96,11 @@ Frontend source lives in `apps/skillpack/client/`. It is built with Vite (`apps/
 
 **Import convention**: prefer the `@/*` path alias (e.g., `@/domain/charts`) over relative paths for cross-layer imports. The alias is defined in `apps/skillpack/tsconfig.client.json`.
 
-Before adding or moving frontend files, follow its `pages / features / domain / components / shared` structure.
+Before adding or moving frontend files, follow its `routes / features / domain / components / shared` structure.
 
 Core frontend boundaries:
 
-- `pages/` — thin route entries only.
+- `routes/` — TanStack Router file-based route definitions; thin route composition only.
 - `features/` — user workflows, Zustand state, and feature-specific API hooks.
 - `domain/` — pure business models, transformations, validation, and rules.
 - `components/` — reusable business UI blocks.

@@ -5,6 +5,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { zodValidator } from "@tanstack/zod-adapter";
+import { useCallback } from "react";
 import { z } from "zod";
 
 import { cancelManagedSkillCurrentQueries } from "@/features/skills/api/invalidation";
@@ -40,13 +41,16 @@ const SkillDetailRoute = () => {
   const skill = skillDetail.data;
   const patchSkill = usePatchSkill(skillName);
 
-  const setSelectedPath = (nextPath: string | undefined) => {
-    void navigate({
-      params: { skillName },
-      search: { path: nextPath === skillFilePath ? undefined : nextPath },
-      to: "/skills/$skillName",
-    });
-  };
+  const setSelectedPath = useCallback(
+    (nextPath: string | undefined) => {
+      void navigate({
+        params: { skillName },
+        search: { path: nextPath === skillFilePath ? undefined : nextPath },
+        to: "/skills/$skillName",
+      });
+    },
+    [navigate, skillName]
+  );
 
   const saveChanges: Parameters<
     typeof SkillDetailView

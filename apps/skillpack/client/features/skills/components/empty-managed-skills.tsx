@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-import { getEmptyLibraryActions } from "../lib/library-surface";
+import { getLibraryActions } from "../lib/library-surface";
 
 interface EmptyManagedSkillsProps {
   status: string;
@@ -22,7 +22,9 @@ export const EmptyManagedSkills = ({
   status,
   onRefresh,
 }: EmptyManagedSkillsProps) => {
-  const [primaryAction, secondaryAction] = getEmptyLibraryActions();
+  const [primaryAction, secondaryAction] = getLibraryActions(
+    "Create your first skill"
+  );
 
   return (
     <Card className="mx-auto w-full max-w-3xl border border-dashed border-border bg-card shadow-none">

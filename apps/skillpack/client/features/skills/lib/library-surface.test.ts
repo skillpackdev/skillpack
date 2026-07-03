@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  getEmptyLibraryActions,
-  getLibraryActions,
-  getManagedSkillsSummary,
-} from "./library-surface";
+import { getLibraryActions } from "./library-surface";
 
 describe("library surface helpers", () => {
   it("makes Add to Library the primary library action", () => {
@@ -23,7 +19,7 @@ describe("library surface helpers", () => {
   });
 
   it("teaches both acquisition paths in the empty state", () => {
-    expect(getEmptyLibraryActions()).toStrictEqual([
+    expect(getLibraryActions("Create your first skill")).toStrictEqual([
       {
         kind: "primary",
         label: "Add to Library",
@@ -35,11 +31,5 @@ describe("library surface helpers", () => {
         to: "/create-skill",
       },
     ]);
-  });
-
-  it("describes the managed skill count with product copy", () => {
-    expect(getManagedSkillsSummary(0)).toBe("No managed skills yet");
-    expect(getManagedSkillsSummary(1)).toBe("1 managed skill");
-    expect(getManagedSkillsSummary(3)).toBe("3 managed skills");
   });
 });

@@ -29,10 +29,14 @@ const formatUserValue = (value: null | string | undefined) =>
   value && value.trim().length > 0 ? value : "Not provided";
 
 export const ProfileView = ({ session }: ProfileViewProps) => {
-  const userName = formatUserValue(session.user.name);
+  const rawName = session.user.name;
+  const userName = formatUserValue(rawName);
   const userEmail = formatUserValue(session.user.email);
   const userImage = session.user.image;
-  const userInitial = userName.trim().charAt(0).toUpperCase() || "A";
+  const userInitial =
+    rawName && rawName.trim().length > 0
+      ? rawName.trim().charAt(0).toUpperCase()
+      : "?";
 
   return (
     <>

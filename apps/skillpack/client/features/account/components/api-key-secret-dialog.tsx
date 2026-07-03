@@ -28,8 +28,12 @@ export const ApiKeySecretDialog = ({
       return;
     }
 
-    await navigator.clipboard.writeText(secret);
-    toast.success("API key copied.");
+    try {
+      await navigator.clipboard.writeText(secret);
+      toast.success("API key copied.");
+    } catch {
+      toast.error("Could not copy API key to clipboard.");
+    }
   };
 
   return (

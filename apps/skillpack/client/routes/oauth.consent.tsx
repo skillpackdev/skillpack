@@ -69,19 +69,23 @@ const OAuthConsentRoute = () => {
     setError(undefined);
     setIsSubmitting(true);
 
-    const response = await respondToOAuthConsent(
-      accept,
-      accept ? scopes.join(" ") : undefined
-    );
+    try {
+      const response = await respondToOAuthConsent(
+        accept,
+        accept ? scopes.join(" ") : undefined
+      );
 
-    setIsSubmitting(false);
+      if (response.error) {
+        setError(response.error.message ?? "OAuth consent failed");
+        return;
+      }
 
-    if (response.error) {
-      setError(response.error.message ?? "OAuth consent failed");
-      return;
+      window.location.assign(response.data.url);
+    } catch {
+      setError("OAuth consent failed");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    window.location.assign(response.data.url);
   };
 
   return (
