@@ -629,8 +629,8 @@ describe("app MCP auth", () => {
     const readSkillTool = body.result.tools.find(
       (tool) => tool.name === "read_skill"
     );
-    const updateSkillTool = body.result.tools.find(
-      (tool) => tool.name === "update_skill"
+    const manageSkillTool = body.result.tools.find(
+      (tool) => tool.name === "manage_skill"
     );
 
     expect(body).toMatchObject({
@@ -639,8 +639,7 @@ describe("app MCP auth", () => {
       result: {
         tools: [
           expect.objectContaining({ name: "list_skills" }),
-          expect.objectContaining({ name: "create_skill" }),
-          expect.objectContaining({ name: "update_skill" }),
+          expect.objectContaining({ name: "manage_skill" }),
           expect.objectContaining({ name: "read_skill" }),
         ],
       },
@@ -648,21 +647,18 @@ describe("app MCP auth", () => {
     const toolNames = body.result.tools.map((tool) => tool.name);
     toolNames.sort();
     expect(toolNames).toStrictEqual([
-      "create_skill",
       "list_skills",
+      "manage_skill",
       "read_skill",
-      "update_skill",
     ]);
     expect({
-      hasUpdateContent: Object.hasOwn(
-        updateSkillTool?.inputSchema.properties ?? {},
-        "content"
-      ),
+      hasManageSkillAction:
+        manageSkillTool?.inputSchema.properties?.action !== undefined,
       readSkillInputKeys: Object.keys(
         readSkillTool?.inputSchema.properties ?? {}
       ),
     }).toStrictEqual({
-      hasUpdateContent: false,
+      hasManageSkillAction: true,
       readSkillInputKeys: ["name"],
     });
   });
@@ -826,23 +822,38 @@ describe("app MCP auth", () => {
     expect(readSkillTextFileByName).not.toHaveBeenCalled();
   });
 
-  it("keeps explicit null fields when update_skill also uploads SKILL.md", async () => {
-    const patchSkillByName = vi
-      .fn<SkillService["patchSkillByName"]>()
+  it("returns structured errors from manage_skill patch when old_string is missing", async () => {
+    const readSkillActivationByName = vi
+      .fn<SkillService["readSkillActivationByName"]>()
       .mockResolvedValue({
-        allowedTools: null,
-        compatibility: null,
-        description: "Uploaded description",
-        license: null,
-        metadata: null,
-        name: "demo-skill",
+        resources: [],
+        skill: {
+          allowedTools: null,
+          compatibility: null,
+          createdAt: new Date("2026-05-25T12:00:00.000Z"),
+          description: "Demo skill",
+          frontmatter: null,
+          headVersionPk: 10,
+          license: null,
+          metadata: null,
+          name: "demo-skill",
+          origin: null,
+          ownerUserId: "user-api-key",
+          pk: 42,
+          skillFileSha256: "skill-md",
+          skillFileSize: 120,
+          updatedAt: new Date("2026-05-25T12:00:00.000Z"),
+          versionId: "version-current",
+        },
+        skillFileContent:
+          "---\nname: demo-skill\ndescription: Demo skill\n---\n\n# Demo\n",
       });
     const app = createApp({
       getApiKeyUserId: vi
         .fn<VerifyApiKeyUserId>()
         .mockResolvedValue("user-api-key"),
       setSkillServicesForUser: setSkillServicesForUser(
-        { patchSkillByName },
+        { readSkillActivationByName },
         []
       ),
     });
@@ -856,18 +867,12 @@ describe("app MCP auth", () => {
           method: "tools/call",
           params: {
             arguments: {
-              license: null,
-              metadata: null,
-              skillName: "demo-skill",
-              upsertResources: [
-                {
-                  content:
-                    "---\nname: demo-skill\ndescription: Uploaded description\nlicense: Apache-2.0\nmetadata:\n  author: acme\n---\n\n# Demo\n",
-                  path: "SKILL.md",
-                },
-              ],
+              action: "patch",
+              name: "demo-skill",
+              new_string: "delta",
+              old_string: "missing",
             },
-            name: "update_skill",
+            name: "manage_skill",
           },
         }),
         headers: {
@@ -881,14 +886,16 @@ describe("app MCP auth", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(patchSkillByName).toHaveBeenCalledWith(
-      "demo-skill",
-      expect.objectContaining({
-        description: "Uploaded description",
-        license: null,
-        metadata: null,
-      })
-    );
+    const body = (await response.json()) as {
+      result: { content: { text: string }[]; isError?: boolean };
+    };
+    expect(body.result.isError).toBeTruthy();
+    expect(JSON.parse(body.result.content[0]?.text ?? "{}")).toMatchObject({
+      error: {
+        code: "patch-string-not-found",
+      },
+      ok: false,
+    });
   });
 
   it("rejects descendant SKILL.md resource URIs before service lookup", async () => {

@@ -3,10 +3,9 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { skillpackMcpInstructions } from "./instructions";
 import { registerSkillResource } from "./resources/skill";
 import { registerSkillIndexResource } from "./resources/skill-index";
-import { registerCreateSkillTool } from "./tools/create-skill";
 import { registerListSkillsTool } from "./tools/list-skills";
+import { registerManageSkillTool } from "./tools/manage-skill";
 import { registerReadSkillTool } from "./tools/read-skill";
-import { registerUpdateSkillTool } from "./tools/update-skill";
 import type { SkillpackMcpContext } from "./types";
 
 export const createMcpServer = (context: SkillpackMcpContext) => {
@@ -26,8 +25,7 @@ export const createMcpServer = (context: SkillpackMcpContext) => {
   );
 
   registerListSkillsTool(server, context);
-  registerCreateSkillTool(server, context);
-  registerUpdateSkillTool(server, context);
+  registerManageSkillTool(server, context);
   registerReadSkillTool(server, context);
   registerSkillIndexResource(server, context);
   registerSkillResource(server, context);

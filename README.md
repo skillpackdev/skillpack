@@ -208,7 +208,7 @@ The MCP server exposes:
 
 - `list_skills` — list the authenticated user's Managed Skill catalog with SEP-2640 `skill://{skillName}/SKILL.md` locations.
 - `read_skill` — read a Skillpack `SKILL.md` activation payload by Skill Name.
-- `create_skill` and `update_skill` — create and patch Managed Skills when the token has `skills:write`.
+- `manage_skill` — create, patch, edit, delete, and manage attached files for Managed Skills when the token has `skills:write`.
 - MCP resources — read `skill://index.json`, `skill://{skillName}/SKILL.md`, and attached resources such as `skill://{skillName}/references/guide.md`.
 
 Agents use `read_skill` for Skillpack Skill Names and MCP `resources/read` for standard resource reads.
