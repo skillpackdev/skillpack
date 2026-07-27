@@ -51,6 +51,9 @@ web_modules/
 # Turborepo cache
 .turbo/
 
+# Browser testing artifacts
+.playwright-cli/
+
 # Optional npm cache directory
 .npm
 

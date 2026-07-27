@@ -29,6 +29,9 @@ pnpm test
 pnpm build
 ```
 
+For manual browser smoke testing against the local app, see
+[Local Browser Testing](docs/local-browser-testing.md).
+
 ## Deploy to Cloudflare
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/skillpackdev/skillpack/tree/main/apps/skillpack)
