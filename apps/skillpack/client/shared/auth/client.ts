@@ -74,6 +74,17 @@ export const loginProvidersQueryOptions = () =>
     queryKey: loginProvidersQueryKey,
   });
 
+export const signInWithEmail = (
+  email: string,
+  password: string,
+  callbackURL: string
+) =>
+  authClient.signIn.email({
+    callbackURL,
+    email,
+    password,
+  });
+
 export const signInWithOidc = (callbackURL: string) =>
   authClient.signIn.oauth2({
     callbackURL,

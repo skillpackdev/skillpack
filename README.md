@@ -42,7 +42,9 @@ repository to Workers Builds for automatic deployments.
 Skillpack uses Better Auth. GitHub is the primary sign-in provider, and the
 same GitHub OAuth App credentials are reused for authenticated public GitHub
 Origin reads. A generic OIDC provider can be enabled as an optional fallback;
-when OIDC vars are absent, the OIDC login button is hidden.
+when OIDC vars are absent, the OIDC login button is hidden. Email/password
+sign-in is enabled for pre-provisioned accounts, while public signup is
+disabled.
 
 For local development:
 
@@ -138,10 +140,18 @@ pnpm db:migrate:remote
 The current development migration resets Managed Skill tables to the Managed
 Skill model and drops old skill rows. Auth tables are not reset.
 
-Seed local development data while `pnpm dev` is running. The skills API is protected, so pass the `better-auth.session_token` value from a local browser login:
+Seed local development data while `pnpm dev` is running:
 
 ```bash
-SKILLPACK_AUTH_COOKIE='...' pnpm db:seed:local
+pnpm db:seed:local
+```
+
+The seed command upserts and authenticates this local-only account before
+creating the example skills:
+
+```text
+Email:    dev@skillpack.local
+Password: skillpack-dev
 ```
 
 Deploy:

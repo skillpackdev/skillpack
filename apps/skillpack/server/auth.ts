@@ -99,6 +99,10 @@ export const createAuth = (env: Env, origin: string) => {
     },
     baseURL,
     database: env.DB,
+    emailAndPassword: {
+      disableSignUp: true,
+      enabled: true,
+    },
     plugins: [
       jwt({
         disableSettingJwtHeader: true,

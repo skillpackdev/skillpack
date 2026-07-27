@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const { signInSocial } = vi.hoisted(() => ({
+const { signInEmail, signInSocial } = vi.hoisted(() => ({
+  signInEmail: vi.fn<(options: unknown) => unknown>(),
   signInSocial: vi.fn<(options: unknown) => unknown>(),
 }));
 
@@ -9,6 +10,7 @@ vi.mock(import("better-auth/react"), async (importOriginal) => {
   const createAuthClient = (() => ({
     $fetch: vi.fn<() => unknown>(),
     signIn: {
+      email: signInEmail,
       social: signInSocial,
     },
     signOut: vi.fn<() => unknown>(),
@@ -20,7 +22,20 @@ vi.mock(import("better-auth/react"), async (importOriginal) => {
 
 describe("client auth", () => {
   afterEach(() => {
+    vi.clearAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it("signs in with email and password using the requested callback URL", async () => {
+    const { signInWithEmail } = await import("./client");
+
+    signInWithEmail("dev@example.com", "password", "/skills");
+
+    expect(signInEmail).toHaveBeenCalledWith({
+      callbackURL: "/skills",
+      email: "dev@example.com",
+      password: "password",
+    });
   });
 
   it("starts GitHub social sign-in with the requested callback URL", async () => {
