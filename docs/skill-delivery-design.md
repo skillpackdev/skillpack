@@ -76,7 +76,7 @@ MCP capabilities:
 
 - `list_skills` lists the authenticated user's Managed Skill catalog with `skill://{skillName}/SKILL.md` locations.
 - `read_skill` reads `SKILL.md` activation payloads by Skill Name.
-- `create_skill` and `update_skill` create and patch Managed Skills when the token has `skills:write`.
+- `manage_skill` creates, patches, edits, deletes, and manages attached files for Managed Skills when the token has `skills:write`.
 - MCP resources expose `skill://index.json`, current Skill files, and attached resources for clients that prefer resource discovery.
 
 The endpoint is stateless in v1 and uses request/response JSON over `@hono/mcp` Streamable HTTP transport.

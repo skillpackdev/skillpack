@@ -27,6 +27,37 @@ const mcpRequest = (method: string, params?: unknown) => ({
   method: "POST",
 });
 
+const parseToolResult = async (response: Response) => {
+  const body = (await response.json()) as {
+    result: { content: { text: string }[] };
+  };
+
+  return JSON.parse(body.result.content[0]?.text ?? "{}") as {
+    action?: string;
+    error?: { code: string; message: string };
+    ok: boolean;
+    skill?: { description: string; name: string };
+  };
+};
+
+const createAuthoringApp = () =>
+  createApp({
+    getApiKeyUserId: vi
+      .fn<() => Promise<string>>()
+      .mockResolvedValue("user-e2e"),
+    setSkillServicesForUser: (c: Context<AppBindings>, userId: string) => {
+      c.set("currentUser", { canWrite: true, id: userId });
+      c.set(
+        "skillService",
+        new SkillService(
+          new SkillRepository(c.var.db, userId),
+          new ResourceManifest(c.var.skillStorage),
+          c.var.originService
+        )
+      );
+    },
+  });
+
 describe("MCP Skill authoring e2e", () => {
   let env: Env;
   let mf: Miniflare;
@@ -53,68 +84,70 @@ describe("MCP Skill authoring e2e", () => {
     await mf.dispose();
   });
 
-  it("creates, updates, and reads a Skill through MCP against D1 and R2", async () => {
-    const app = createApp({
-      getApiKeyUserId: vi
-        .fn<() => Promise<string>>()
-        .mockResolvedValue("user-e2e"),
-      setSkillServicesForUser: (c: Context<AppBindings>, userId: string) => {
-        c.set("currentUser", { canWrite: true, id: userId });
-        c.set(
-          "skillService",
-          new SkillService(
-            new SkillRepository(c.var.db, userId),
-            new ResourceManifest(c.var.skillStorage),
-            c.var.originService
-          )
-        );
-      },
-    });
+  it("creates, patches, edits, and writes files through manage_skill", async () => {
+    const app = createAuthoringApp();
 
     const createResponse = await app.request(
       "/mcp",
       mcpRequest("tools/call", {
         arguments: {
-          content: "# Demo\n",
+          action: "create",
+          content:
+            "---\nname: mcp-demo\ndescription: Demo skill\n---\n\n# Demo\n",
+          name: "mcp-demo",
+        },
+        name: "manage_skill",
+      }),
+      env
+    );
+
+    expect({
+      createResult: await parseToolResult(createResponse),
+      createStatus: createResponse.status,
+    }).toMatchObject({
+      createResult: {
+        action: "create",
+        ok: true,
+        skill: {
           description: "Demo skill",
           name: "mcp-demo",
-          resources: [
-            {
-              content: "first note",
-              path: "references/note.txt",
-            },
-          ],
         },
-        name: "create_skill",
-      }),
-      env
-    );
+      },
+      createStatus: 200,
+    });
 
-    expect(createResponse.status).toBe(200);
-
-    const updateResponse = await app.request(
-      "/mcp",
+    for (const request of [
       mcpRequest("tools/call", {
         arguments: {
-          skillName: "mcp-demo",
-          upsertResources: [
-            {
-              content:
-                "---\nname: mcp-demo\ndescription: Updated demo skill\n---\n\n# Demo\n\nUpdated by MCP.\n",
-              path: "SKILL.md",
-            },
-            {
-              content: "second note",
-              path: "references/note.txt",
-            },
-          ],
+          action: "write_file",
+          file_content: "first note",
+          file_path: "references/note.txt",
+          name: "mcp-demo",
         },
-        name: "update_skill",
+        name: "manage_skill",
       }),
-      env
-    );
-
-    expect(updateResponse.status).toBe(200);
+      mcpRequest("tools/call", {
+        arguments: {
+          action: "patch",
+          name: "mcp-demo",
+          new_string: "# Demo\n\nUpdated by MCP.\n",
+          old_string: "# Demo\n",
+        },
+        name: "manage_skill",
+      }),
+      mcpRequest("tools/call", {
+        arguments: {
+          action: "edit",
+          content:
+            "---\nname: mcp-demo\ndescription: Updated demo skill\n---\n\n# Demo\n\nUpdated by MCP.\n",
+          name: "mcp-demo",
+        },
+        name: "manage_skill",
+      }),
+    ]) {
+      const response = await app.request("/mcp", request, env);
+      expect(response.status).toBe(200);
+    }
 
     const readResponse = await app.request(
       "/mcp",
@@ -131,30 +164,69 @@ describe("MCP Skill authoring e2e", () => {
       }),
       env
     );
-
     const readBody = await readResponse.text();
-
-    expect({
-      hasUpdatedBody: readBody.includes("Updated by MCP"),
-      hasUpdatedFrontmatter: readBody.includes(
-        "description: Updated demo skill"
-      ),
-    }).toStrictEqual({
-      hasUpdatedBody: true,
-      hasUpdatedFrontmatter: true,
-    });
-    await expect(resourceResponse.text()).resolves.toContain("second note");
-
     const repository = new SkillRepository(createDb(env.DB), "user-e2e");
     const skill = await repository.findSkillByName("mcp-demo");
     const versions = await repository.listVersions("mcp-demo");
 
     expect({
       description: skill?.description,
+      hasUpdatedBody: readBody.includes("Updated by MCP"),
+      hasUpdatedFrontmatter: readBody.includes(
+        "description: Updated demo skill"
+      ),
+      resourceBody: await resourceResponse.text(),
       versionCount: versions.length,
     }).toStrictEqual({
       description: "Updated demo skill",
-      versionCount: 2,
+      hasUpdatedBody: true,
+      hasUpdatedFrontmatter: true,
+      resourceBody: expect.stringContaining("first note"),
+      versionCount: 4,
+    });
+  });
+
+  it("deletes a skill through manage_skill", async () => {
+    const app = createAuthoringApp();
+
+    await app.request(
+      "/mcp",
+      mcpRequest("tools/call", {
+        arguments: {
+          action: "create",
+          content:
+            "---\nname: mcp-delete\ndescription: Delete me\n---\n\n# Delete\n",
+          name: "mcp-delete",
+        },
+        name: "manage_skill",
+      }),
+      env
+    );
+
+    const deleteResponse = await app.request(
+      "/mcp",
+      mcpRequest("tools/call", {
+        arguments: {
+          action: "delete",
+          name: "mcp-delete",
+        },
+        name: "manage_skill",
+      }),
+      env
+    );
+    const repository = new SkillRepository(createDb(env.DB), "user-e2e");
+
+    expect({
+      deleteResult: await parseToolResult(deleteResponse),
+      deleteStatus: deleteResponse.status,
+      skill: await repository.findSkillByName("mcp-delete"),
+    }).toMatchObject({
+      deleteResult: {
+        action: "delete",
+        ok: true,
+      },
+      deleteStatus: 200,
+      skill: undefined,
     });
   });
 });

@@ -32,6 +32,50 @@ export const formatSkillMutationResult = (skill: {
   ],
 });
 
+export const formatManageSkillSuccess = (
+  action: string,
+  skill: { description: string; name: string }
+) => ({
+  content: [
+    {
+      text: JSON.stringify(
+        {
+          action,
+          ok: true,
+          skill: {
+            description: skill.description,
+            location: toSkillLocation(skill.name),
+            name: skill.name,
+          },
+        },
+        null,
+        2
+      ),
+      type: "text" as const,
+    },
+  ],
+});
+
+export const formatManageSkillError = (code: string, message: string) => ({
+  content: [
+    {
+      text: JSON.stringify(
+        {
+          error: {
+            code,
+            message,
+          },
+          ok: false,
+        },
+        null,
+        2
+      ),
+      type: "text" as const,
+    },
+  ],
+  isError: true as const,
+});
+
 export const formatSkillContent = (
   content: string,
   resources: { mediaType: string; path: string; size: number }[],
